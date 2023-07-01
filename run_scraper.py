@@ -1,4 +1,7 @@
 # This is a sample Python script.
+import os
+import shutil
+import sys
 import time
 import timeit
 from time import sleep
@@ -12,6 +15,43 @@ from selenium.webdriver.common.by import By
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+
+
+class ItemInfo:
+    def __init__(self, index: int, brand: str, title: str, price: str, sale_price: str,
+                 image1_src: str, image2_src: str):
+        self.index = str(index).zfill(4)
+        self.brand = brand
+        self.title = title
+        self.price = price
+        self.sale_price = sale_price
+        self.image1_src = image1_src
+        self.image2_src = image2_src
+        self.image1_filename = f"{self.index}. {brand} - {title}.jpg"
+
+    def echo(self):
+        print(f"Item info [{self.index}]")
+        print('Brand:       ', self.brand)
+        print('Product Name:', self.title)
+        print('Retail Price:', self.price)
+        print('Sale Price:  ', self.sale_price)
+        print('Photo 1 URL: ', self.image1_src)
+        print('Photo 2 URL: ', self.image2_src)
+
+
+class OutputInfo:
+    def __init__(self, group, output_path, item_info):
+        self.group = group
+        self.output_path = output_path
+        self.item_count = 0
+        self.item_info = item_info
+
+    def echo(self):
+        print("Output group:", self.group)
+        print("Output path:", self.output_path)
+        if self.item_info:
+            self.item_info.echo()
+
 
 def print_hi(name):
     # Use a breakpoint in the code line below to debug your script.
@@ -34,10 +74,43 @@ def check_url_validity(url):
         return False
 
 
-def uptherestore_product_list(page_source):
+def download_item_img(output_info):
+    output_path = os.path.join(output_info.output_path, output_info.item_info.image1_filename)
+    print(f"Image download to path: {output_path}")
+
+    url = output_info.item_info.image1_src
+    # print(f"download img url: {url}")
+
+    if output_path is None or not isinstance(output_path, str):
+        print(f"Invalid output_path parameter. {download_item_img.__name__}")
+        sys.exit(1)
+
+    if url is None or not isinstance(url, str):
+        print(f"Invalid url parameter. {download_item_img.__name__}")
+        sys.exit(1)
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the download is successful, raise an exception if there is an error
+
+        with open(output_path, "wb") as file:
+            file.write(response.content)
+        print("Image download completed\n")
+
+    except requests.HTTPError as e:
+        print(f"HTTP Error: {e}")
+
+    except requests.RequestException as e:
+        print(f"Error occurred while downloading the image: {e}")
+
+    except Exception as e:
+        print(f"Unknown error occurred: {e}")
+
+
+def uptherestore_product_list(page_source, output_info):
     soup = BeautifulSoup(page_source, 'html.parser')
     product_grid_section = soup.find('section', class_='product-grid')
-    items = 0
+
     if product_grid_section is not None:
         product_subtitles = product_grid_section.find_all('div', class_='product__subtitle')
         for subtitle in product_subtitles:
@@ -53,7 +126,9 @@ def uptherestore_product_list(page_source):
                 image2_element = subtitle.find_previous('figure', class_='product__image')
                 try:
                     image2_src = image2_element.find('img')['src']
+                    image2_src = "https:" + image2_src
                 except (AttributeError, TypeError):
+                    # Second figure might be a video
                     image2_src = None
 
                 # Find the second image or video URL
@@ -61,35 +136,51 @@ def uptherestore_product_list(page_source):
                 #    lambda tag: tag.name in ['img', 'source']) # figure: img, video: source
                 # image2_src = image2_element['src'] if image2_element else None
 
-                # Find the first image or video  URL
+                # Find the first image or video URL
                 image1_element = subtitle.find_previous('figure', class_='product__image').find_previous('figure')
-                if image1_element is not None:
+                if image1_element:
                     image1_element = image1_element.find(lambda tag: tag.name in ['img', 'source'])
-                    image1_src = image1_element['src'] if image1_element else None
+                    image1_src = image1_element.get('src')
+                    image1_src = "https:" + image1_src
                 else:
                     image1_src = None
 
-                items += 1
-                # print('品牌名稱:', brand)
-                # print('商品名稱:', title)
-                # print('原價:', price)
-                # print('特價:', sale_price)
-                # print('商品照片:', image1_src)
-                # print('商品照片:', image2_src)
-                # print()
+                output_info.item_count += 1
+                output_info.item_info = ItemInfo(output_info.item_count, brand, title, price, sale_price,
+                                                 image1_src, image2_src)
+                output_info.item_info.echo()
+
+                download_item_img(output_info)
                 # break
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
-    return items
 
 
 def uptherestore_web_scraper(url):
-    print("Input URL: ", url)
+    # print("Input URL:", url)
     if check_url_validity(url) is False:
         return False
     if not url.startswith("https://uptherestore.com"):
         print("URL is valid, but it does not belong to the uptherestore website.")
         return False
+
+    brand = url.split("/")[-1]
+    print("Brand:", brand)
+
+    folder_path = os.path.join(".", "output", brand)
+
+    # Clean up the old output directory
+    if os.path.exists(folder_path):
+        if os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
+        else:
+            print("Path is not a directory:", folder_path)
+
+    os.makedirs(folder_path)
+    os.makedirs(os.path.join(folder_path, "mod"))
+
+    output_info = OutputInfo(brand, folder_path, None)
+    output_info.echo()
 
     # Set Chrome browser options
     chrome_options = Options()
@@ -101,8 +192,6 @@ def uptherestore_web_scraper(url):
     driver.get(url)
     sleep(2)
     page_source = driver.page_source
-
-    items = 0
 
     # Find the pagination section on the webpage
     pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
@@ -125,13 +214,11 @@ def uptherestore_web_scraper(url):
         # Get the total number of pages
         total_pages = max([int(num) for num in page_numbers])
 
-    print("Total pages:", total_pages)
-
     # Write the page source to a file
     # with open("page_source.html", "w", encoding="utf-8") as file:
     #    file.write(page_source)
 
-    items += uptherestore_product_list(page_source)
+    uptherestore_product_list(page_source, output_info)
 
     if total_pages >= 2:
         for page in range(2, total_pages + 1):
@@ -141,19 +228,20 @@ def uptherestore_web_scraper(url):
             # The buffering time for the website to fully load.
             sleep(2)
             page_source = driver.page_source
-            items += uptherestore_product_list(page_source)
+            uptherestore_product_list(page_source, output_info)
 
     # close browser
     driver.quit()
 
-    print("Total items:", items)
+    print("Total pages:", total_pages)
+    print("Total items:", output_info.item_count)
 
 
 def main():
     # print_hi('PyCharm')
 
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Converse")
+    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Converse")
     # uptherestore_web_parser("https://uptherestore.com/collections/sale/Nike")
     # uptherestore_web_parser("https://uptherestore.com/collections/sale/Lite-Year")
     # uptherestore_web_parser("https://uptherestore.com/collections/sale")

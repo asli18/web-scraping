@@ -20,14 +20,15 @@ from selenium.webdriver.common.by import By
 class ItemInfo:
     def __init__(self, index: int, brand: str, title: str, price: str, sale_price: str,
                  image1_src: str, image2_src: str):
-        self.index = str(index).zfill(4)
+        self.index = str(index).zfill(3)
         self.brand = brand
-        self.title = title
+        self.title = title.replace("/", "-")  # Replace the forward slash with a hyphen.
         self.price = price
         self.sale_price = sale_price
         self.image1_src = image1_src
         self.image2_src = image2_src
-        self.image1_filename = f"{self.index}. {brand} - {title}.jpg"
+
+        self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
     def echo(self):
         print(f"Item info [{self.index}]")
@@ -99,12 +100,15 @@ def download_item_img(output_info):
 
     except requests.HTTPError as e:
         print(f"HTTP Error: {e}")
+        sys.exit(1)
 
     except requests.RequestException as e:
         print(f"Error occurred while downloading the image: {e}")
+        sys.exit(1)
 
     except Exception as e:
         print(f"Unknown error occurred: {e}")
+        sys.exit(1)
 
 
 def uptherestore_product_list(page_source, output_info):
@@ -154,6 +158,7 @@ def uptherestore_product_list(page_source, output_info):
                 # break
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
+        sys.exit(1)
 
 
 def uptherestore_web_scraper(url):
@@ -175,6 +180,7 @@ def uptherestore_web_scraper(url):
             shutil.rmtree(folder_path)
         else:
             print("Path is not a directory:", folder_path)
+            sys.exit(1)
 
     os.makedirs(folder_path)
     os.makedirs(os.path.join(folder_path, "mod"))
@@ -240,18 +246,16 @@ def uptherestore_web_scraper(url):
 def main():
     # print_hi('PyCharm')
 
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
+    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
     # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Converse")
     # uptherestore_web_parser("https://uptherestore.com/collections/sale/Nike")
-    # uptherestore_web_parser("https://uptherestore.com/collections/sale/Lite-Year")
-    # uptherestore_web_parser("https://uptherestore.com/collections/sale")
 
     # Error cases
     # uptherestore_web_parser("http://www.invalid-domain.com")
     # uptherestore_web_parser("https://www.example.com")
     # uptherestore_web_parser("https://www.example.com/nonexistent-page")
     # uptherestore_web_parser("https://www.example.com/internal-server-error")
-    print()
 
 
 if __name__ == '__main__':

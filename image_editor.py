@@ -32,13 +32,13 @@ def add_text_to_image(in_file_path: str, out_file_path: str, text: str):
     dpi = image.info.get("dpi")
 
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("SourceSerifPro-Regular.ttf", 36)
-    position = (30, 10)
+    font = ImageFont.truetype("SourceSerifPro-SemiBold.ttf", 36)
+    position = (36, 0)
 
     draw.text(position, text, font=font, fill=(0, 0, 0))
 
     image.save(out_file_path, dpi=dpi)
-    print("Image create:", out_file_path)
+    print(f"Saved modified image as: {out_file_path}")
 
 
 def append_text_to_filename(file_path, text):
@@ -66,18 +66,19 @@ def change_file_extension(file_path, new_extension):
 
 
 # Example usage
-try:
-    insert_text = "Hello!\nSpace"
+if __name__ == '__main__':
+    try:
+        insert_text = "Hello!\nSpace"
 
-    input_file_path = "./image_sample/astronaut.png"
-    output_file_path = change_file_extension(append_text_to_filename(input_file_path, "_mod"), ".jpg")
-    # output_file_path = "./image_sample/astronaut_mod.jpg"
-    add_text_to_image(input_file_path, output_file_path, insert_text)
+        input_file_path = "./image_sample/astronaut.png"
+        output_file_path = change_file_extension(append_text_to_filename(input_file_path, "_mod"), ".jpg")
+        # output_file_path = "./image_sample/astronaut_mod.jpg"
+        add_text_to_image(input_file_path, output_file_path, insert_text)
 
-    input_file_path = "./image_sample/lightning.jpg"
-    output_file_path = append_text_to_filename(input_file_path, "_mod")
-    # output_file_path = "./image_sample/lightning_mod.jpg"
-    add_text_to_image(input_file_path, output_file_path, insert_text)
+        input_file_path = "./image_sample/lightning.jpg"
+        output_file_path = append_text_to_filename(input_file_path, "_mod")
+        # output_file_path = "./image_sample/lightning_mod.jpg"
+        add_text_to_image(input_file_path, output_file_path, insert_text)
 
-except ImageProcessingError as e:
-    print(f"Error occurred during image processing: {e}")
+    except ImageProcessingError as e:
+        print(f"Error occurred during image processing: {e}")

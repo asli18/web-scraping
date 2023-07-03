@@ -12,6 +12,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+import image_editor
+
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -75,7 +77,7 @@ def check_url_validity(url):
         return False
 
 
-def download_item_img(output_info):
+def download_item_img(output_info: OutputInfo):
     output_path = os.path.join(output_info.output_path, output_info.item_info.image1_filename)
     print(f"Image download to path: {output_path}")
 
@@ -111,7 +113,21 @@ def download_item_img(output_info):
         sys.exit(1)
 
 
-def uptherestore_product_list(page_source, output_info):
+def image_post_processing(output_info: OutputInfo):
+    print("Image post-processing")
+
+    input_file_path = os.path.join(output_info.output_path, output_info.item_info.image1_filename)
+
+    directory, filename = os.path.split(input_file_path)
+    output_file_path = os.path.join(directory, "mod", filename)
+
+    insert_text = f"{output_info.item_info.brand}\n{output_info.item_info.title}"
+
+    # Add a string text to the image
+    image_editor.add_text_to_image(input_file_path, output_file_path, insert_text)
+
+
+def uptherestore_product_list(page_source, output_info: OutputInfo):
     soup = BeautifulSoup(page_source, 'html.parser')
     product_grid_section = soup.find('section', class_='product-grid')
 
@@ -154,8 +170,11 @@ def uptherestore_product_list(page_source, output_info):
                                                  image1_src, image2_src)
                 output_info.item_info.echo()
 
+                # Download product image
                 download_item_img(output_info)
-                # break
+
+                # Image post-processing
+                image_post_processing(output_info)
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
         sys.exit(1)

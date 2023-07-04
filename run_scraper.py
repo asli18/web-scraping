@@ -19,41 +19,47 @@ import image_editor
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 
-class ItemInfo:
-    def __init__(self, index: int, brand: str, title: str, price: str, sale_price: str,
+class ProductInfo:
+    def __init__(self, index: int, brand: str, title: str,
+                 original_price: int, sale_price: int, cost: int, selling_price: int,
                  image1_src: str, image2_src: str):
         self.index = str(index).zfill(3)
         self.brand = brand
         self.title = title.replace("/", "-")  # Replace the forward slash with a hyphen.
-        self.price = price
+        self.original_price = original_price
         self.sale_price = sale_price
+        self.cost = cost
+        self.selling_price = selling_price
         self.image1_src = image1_src
         self.image2_src = image2_src
 
         self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
     def echo(self):
-        print(f"Item info [{self.index}]")
-        print('Brand:       ', self.brand)
-        print('Product Name:', self.title)
-        print('Retail Price:', self.price)
-        print('Sale Price:  ', self.sale_price)
-        print('Photo 1 URL: ', self.image1_src)
-        print('Photo 2 URL: ', self.image2_src)
+        print(f"Product info [{self.index}]")
+        print(f"Brand:          {self.brand}")
+        print(f"Name:           {self.title}")
+        print(f"Retail Price:   ${self.original_price:,}")
+        print(f"Sale Price:     ${self.sale_price:,}")
+        print(f"Estimated cost: ${self.cost:,}")
+        print(f"Selling Price:  ${self.selling_price:,}")
+        print(f"Photo 1 URL:    {self.image1_src}")
+        print(f"Photo 2 URL:    {self.image2_src}")
+        print()
 
 
 class OutputInfo:
-    def __init__(self, group, output_path, item_info):
+    def __init__(self, group, output_path, product_info):
         self.group = group
         self.output_path = output_path
-        self.item_count = 0
-        self.item_info = item_info
+        self.product_count = 0
+        self.product_info = product_info
 
     def echo(self):
         print("Output group:", self.group)
         print("Output path:", self.output_path)
-        if self.item_info:
-            self.item_info.echo()
+        if self.product_info:
+            self.product_info.echo()
 
 
 def print_hi(name):
@@ -77,19 +83,19 @@ def check_url_validity(url):
         return False
 
 
-def download_item_img(output_info: OutputInfo):
-    output_path = os.path.join(output_info.output_path, output_info.item_info.image1_filename)
+def download_product_img(output_info: OutputInfo):
+    output_path = os.path.join(output_info.output_path, output_info.product_info.image1_filename)
     print(f"Image download to path: {output_path}")
 
-    url = output_info.item_info.image1_src
+    url = output_info.product_info.image1_src
     # print(f"download img url: {url}")
 
     if output_path is None or not isinstance(output_path, str):
-        print(f"Invalid output_path parameter. {download_item_img.__name__}")
+        print(f"Invalid output_path parameter. {download_product_img.__name__}")
         sys.exit(1)
 
     if url is None or not isinstance(url, str):
-        print(f"Invalid url parameter. {download_item_img.__name__}")
+        print(f"Invalid url parameter. {download_product_img.__name__}")
         sys.exit(1)
 
     try:
@@ -116,15 +122,32 @@ def download_item_img(output_info: OutputInfo):
 def image_post_processing(output_info: OutputInfo):
     print("Image post-processing")
 
-    input_file_path = os.path.join(output_info.output_path, output_info.item_info.image1_filename)
+    input_file_path = os.path.join(output_info.output_path, output_info.product_info.image1_filename)
 
     directory, filename = os.path.split(input_file_path)
     output_file_path = os.path.join(directory, "mod", filename)
 
-    insert_text = f"{output_info.item_info.brand}\n{output_info.item_info.title}"
+    insert_text = f"{output_info.product_info.brand}\n" \
+                  f"{output_info.product_info.title}\n" \
+                  f"${output_info.product_info.selling_price:,}"
 
-    # Add a string text to the image
-    image_editor.add_text_to_image(input_file_path, output_file_path, insert_text)
+    try:
+        # Add a string text to the image
+        image_editor.add_text_to_image(input_file_path, output_file_path, insert_text)
+
+        # Remove unnecessary source file
+        image_editor.delete_image(input_file_path)
+
+        # shutil.move(output_file_path, input_file_path)
+
+    except Exception as e:
+        print(f"Image post-processing error: {e}")
+        sys.exit(1)
+
+
+def uptherestore_product_price_parser(price_string: str) -> int:
+    price = price_string.split(".")[0].replace(",", "").replace("$", "")
+    return int(price)
 
 
 def uptherestore_product_list(page_source, output_info: OutputInfo):
@@ -139,8 +162,35 @@ def uptherestore_product_list(page_source, output_info: OutputInfo):
 
                 brand = subtitle.find('span').contents[0].strip().split('\n')[0]
                 title = subtitle.find_next('div', class_='product__title').text.strip()
-                price = subtitle.find_next('del', class_='price__amount').text.strip()
+                original_price = subtitle.find_next('del', class_='price__amount').text.strip()
                 sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
+
+                # Parse price string to int
+                original_price = uptherestore_product_price_parser(original_price)
+                sale_price = uptherestore_product_price_parser(sale_price)
+
+                cost = round(((sale_price / 1.1) + 850) * 1.16)
+
+                # Profit
+                if cost < 10000:
+                    if cost < 4000:
+                        selling_price = cost + 300
+                    elif cost < 6000:
+                        selling_price = cost + 400
+                    elif cost < 8000:
+                        selling_price = cost + 500
+                    else:
+                        selling_price = cost + 600
+                else:
+                    selling_price = cost * 1.063  # 6.3% profit
+
+                # Round the price to the nearest even ten
+                selling_price = round(selling_price / 20) * 20
+
+                if selling_price > original_price:
+                    continue
+
+                # Product image parsing and post-processing
 
                 # Find the second image URL
                 image2_element = subtitle.find_previous('figure', class_='product__image')
@@ -165,16 +215,19 @@ def uptherestore_product_list(page_source, output_info: OutputInfo):
                 else:
                     image1_src = None
 
-                output_info.item_count += 1
-                output_info.item_info = ItemInfo(output_info.item_count, brand, title, price, sale_price,
-                                                 image1_src, image2_src)
-                output_info.item_info.echo()
+                output_info.product_count += 1
+                output_info.product_info = ProductInfo(output_info.product_count, brand, title,
+                                                       original_price, sale_price, cost, selling_price,
+                                                       image1_src, image2_src)
+                output_info.product_info.echo()
 
                 # Download product image
-                download_item_img(output_info)
+                download_product_img(output_info)
 
                 # Image post-processing
                 image_post_processing(output_info)
+
+                # Product information logging
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
         sys.exit(1)
@@ -258,17 +311,32 @@ def uptherestore_web_scraper(url):
     # close browser
     driver.quit()
 
-    print("Total pages:", total_pages)
-    print("Total items:", output_info.item_count)
+    # print("Total pages:", total_pages)
+    print("Total valid products:", output_info.product_count)
 
 
-def main():
+def main() -> None:
     # print_hi('PyCharm')
 
-    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Needles")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
-    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Converse")
-    # uptherestore_web_parser("https://uptherestore.com/collections/sale/Nike")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Salomon")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Asics")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Reebok")
+
+    # Accessories
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Maple")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/bleue-burnham")
 
     # Error cases
     # uptherestore_web_parser("http://www.invalid-domain.com")

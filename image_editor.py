@@ -49,6 +49,16 @@ def append_text_to_filename(file_path, text):
     return new_file_path
 
 
+def delete_image(file_path):
+    try:
+        os.remove(file_path)
+        print(f"Image deleted: {file_path}")
+    except FileNotFoundError:
+        raise ImageProcessingError(f"Image not found: {file_path}")
+    except OSError as e:
+        raise ImageProcessingError(f"Error occurred while deleting image: {e}")
+
+
 def change_file_extension(file_path, new_extension):
     # Get the directory path and filename from the file path
     directory, filename = os.path.split(file_path)
@@ -66,7 +76,7 @@ def change_file_extension(file_path, new_extension):
 
 
 # Example usage
-if __name__ == '__main__':
+def example() -> None:
     try:
         insert_text = "Hello!\nSpace"
 
@@ -82,3 +92,7 @@ if __name__ == '__main__':
 
     except ImageProcessingError as e:
         print(f"Error occurred during image processing: {e}")
+
+
+if __name__ == '__main__':
+    example()

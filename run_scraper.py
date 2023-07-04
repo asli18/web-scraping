@@ -132,8 +132,17 @@ def image_post_processing(output_info: OutputInfo):
                   f"${output_info.product_info.selling_price:,}"
 
     try:
+        # Get the size of the original image
+        width, height = image_editor.get_image_size(input_file_path)
+
+        # Resize image for IG Stories (9:16).
+        height = int(width * (16 / 9))
+
+        # Expand the image
+        image_editor.expand_image_with_white_background(input_file_path, output_file_path, (width, height))
+
         # Add a string text to the image
-        image_editor.add_text_to_image(input_file_path, output_file_path, insert_text)
+        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text)
 
         # Remove unnecessary source file
         image_editor.delete_image(input_file_path)
@@ -318,21 +327,22 @@ def uptherestore_web_scraper(url):
 def main() -> None:
     # print_hi('PyCharm')
 
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Needles")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
+
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Asics")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Reebok")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Salomon")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Asics")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Reebok")
 
     # Accessories
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Maple")

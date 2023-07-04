@@ -32,8 +32,8 @@ def add_text_to_image(in_file_path: str, out_file_path: str, text: str):
     dpi = image.info.get("dpi")
 
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("SourceSerifPro-SemiBold.ttf", 36)
-    position = (36, 0)
+    font = ImageFont.truetype("SourceSerifPro-SemiBold.ttf", 40)
+    position = (38, 280)
 
     draw.text(position, text, font=font, fill=(0, 0, 0))
 
@@ -49,12 +49,18 @@ def append_text_to_filename(file_path, text):
     return new_file_path
 
 
-def delete_image(file_path):
+def get_image_size(image_path):
+    image = Image.open(image_path)
+    width, height = image.size
+    return width, height
+
+
+def delete_image(image_path):
     try:
-        os.remove(file_path)
-        print(f"Image deleted: {file_path}")
+        os.remove(image_path)
+        print(f"Image deleted: {image_path}")
     except FileNotFoundError:
-        raise ImageProcessingError(f"Image not found: {file_path}")
+        raise ImageProcessingError(f"Image not found: {image_path}")
     except OSError as e:
         raise ImageProcessingError(f"Error occurred while deleting image: {e}")
 
@@ -73,6 +79,37 @@ def change_file_extension(file_path, new_extension):
     new_file_path = os.path.join(directory, new_filename)
 
     return new_file_path
+
+
+def expand_image_with_white_background(image_path, output_path, new_size):
+    # Open the original image
+    try:
+        image = Image.open(image_path)
+    except (FileNotFoundError, OSError):
+        raise ImageProcessingError(f"Invalid image path: {image_path}")
+
+    # Convert the image to RGB mode if it is in RGBA format (PNG file)
+    image = image.convert("RGB")
+
+    dpi = image.info.get("dpi")
+
+    # Get the size of the original image and the new image
+    original_size = image.size
+    new_width, new_height = new_size
+
+    # Create a new blank image and fill it with white background
+    # background_color = (255, 255, 255)  # White background color
+    background_color = (238, 240, 242)  # To match the background color of uptherestore product image
+    new_image = Image.new("RGB", new_size, background_color)
+
+    # Calculate the placement position of the original image in the new image to keep it centered
+    offset = ((new_width - original_size[0]) // 2, (new_height - original_size[1]) // 2)
+
+    # Paste the original image onto the center of the new image
+    new_image.paste(image, offset)
+
+    # Save the new image
+    new_image.save(output_path, dpi=dpi)
 
 
 # Example usage

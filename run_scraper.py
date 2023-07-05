@@ -4,6 +4,7 @@ import shutil
 import sys
 import time
 import timeit
+from datetime import timedelta
 from time import sleep
 
 import requests
@@ -65,6 +66,17 @@ class OutputInfo:
 def print_hi(name):
     # Use a breakpoint in the code line below to debug your script.
     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+
+
+def convert_seconds_to_time(seconds):
+    duration = timedelta(seconds=seconds)
+
+    days = duration.days
+    hours = duration.seconds // 3600
+    minutes = (duration.seconds // 60) % 60
+    seconds = duration.seconds % 60
+
+    return days, hours, minutes, seconds
 
 
 def check_url_validity(url):
@@ -136,13 +148,17 @@ def image_post_processing(output_info: OutputInfo):
         width, height = image_editor.get_image_size(input_file_path)
 
         # Resize image for IG Stories (9:16).
-        height = int(width * (16 / 9))
+        new_height = int(width * (16 / 9))
+
+        # Set the text position above the product image with a specified offset.
+        # text_position = (38, ((new_height - height) / 2) - 200)
+        text_position = (38, 280)
 
         # Expand the image
-        image_editor.expand_image_with_white_background(input_file_path, output_file_path, (width, height))
+        image_editor.expand_image_with_white_background(input_file_path, output_file_path, (width, new_height))
 
         # Add a string text to the image
-        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text)
+        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text, text_position)
 
         # Remove unnecessary source file
         image_editor.delete_image(input_file_path)
@@ -327,28 +343,28 @@ def uptherestore_web_scraper(url):
 def main() -> None:
     # print_hi('PyCharm')
 
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Needles")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
+    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
 
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Asics")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Reebok")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Salomon")
+    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Salomon")  # bug
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
 
     # Accessories
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/Maple")
     uptherestore_web_scraper("https://uptherestore.com/collections/sale/bleue-burnham")
 
-    # Error cases
+    # Error cases, invalid URL
     # uptherestore_web_parser("http://www.invalid-domain.com")
     # uptherestore_web_parser("https://www.example.com")
     # uptherestore_web_parser("https://www.example.com/nonexistent-page")
@@ -364,7 +380,10 @@ if __name__ == '__main__':
     end_time = time.perf_counter()
     execution_time = (end_time - start_time) * 1e3
 
-    print(f"Elapsed time： {execution_timeit:.3f} ms (by timeit)")
-    print(f"Elapsed time： {execution_time:.3f} ms (by perf_counter)")
+    print(f"Elapsed time: {execution_timeit:.3f} ms (by timeit)")
+    print(f"Elapsed time: {execution_time:.3f} ms (by perf_counter)")
+
+    days, hours, minutes, seconds = convert_seconds_to_time(execution_time / 1e3)
+    print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec")
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

@@ -8,7 +8,7 @@ class ImageProcessingError(Exception):
 
 
 # Add text to an image (JPEG or PNG) and save the output as a JPEG file
-def add_text_to_image(in_file_path: str, out_file_path: str, text: str):
+def add_text_to_image(in_file_path: str, out_file_path: str, text: str, position):
     if not isinstance(in_file_path, str):
         raise ImageProcessingError(f"Invalid 'in_file_path' parameter. Expected string, got {type(in_file_path)}")
     if not isinstance(out_file_path, str):
@@ -33,7 +33,6 @@ def add_text_to_image(in_file_path: str, out_file_path: str, text: str):
 
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype("SourceSerifPro-SemiBold.ttf", 40)
-    position = (38, 280)
 
     draw.text(position, text, font=font, fill=(0, 0, 0))
 
@@ -116,16 +115,17 @@ def expand_image_with_white_background(image_path, output_path, new_size):
 def example() -> None:
     try:
         insert_text = "Hello!\nSpace"
+        position = (30, 10)
 
         input_file_path = "./image_sample/astronaut.png"
         output_file_path = change_file_extension(append_text_to_filename(input_file_path, "_mod"), ".jpg")
         # output_file_path = "./image_sample/astronaut_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, insert_text)
+        add_text_to_image(input_file_path, output_file_path, insert_text, position)
 
         input_file_path = "./image_sample/lightning.jpg"
         output_file_path = append_text_to_filename(input_file_path, "_mod")
         # output_file_path = "./image_sample/lightning_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, insert_text)
+        add_text_to_image(input_file_path, output_file_path, insert_text, position)
 
     except ImageProcessingError as e:
         print(f"Error occurred during image processing: {e}")

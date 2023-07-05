@@ -1,4 +1,5 @@
 # This is a sample Python script.
+import logging
 import os
 import shutil
 import sys
@@ -37,7 +38,7 @@ class ProductInfo:
         self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
     def echo(self):
-        print(f"Product info [{self.index}]")
+        print(f"---- [ Product No.{self.index} ] ----")
         print(f"Brand:          {self.brand}")
         print(f"Name:           {self.title}")
         print(f"Retail Price:   ${self.original_price:,}")
@@ -68,15 +69,15 @@ def print_hi(name):
     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
 
 
-def convert_seconds_to_time(seconds):
-    duration = timedelta(seconds=seconds)
+def convert_seconds_to_time(sec):
+    duration = timedelta(seconds=sec)
 
-    days = duration.days
-    hours = duration.seconds // 3600
-    minutes = (duration.seconds // 60) % 60
-    seconds = duration.seconds % 60
+    _days = duration.days
+    _hours = duration.seconds // 3600
+    _minutes = (duration.seconds // 60) % 60
+    _seconds = duration.seconds % 60
 
-    return days, hours, minutes, seconds
+    return _days, _hours, _minutes, _seconds
 
 
 def check_url_validity(url):
@@ -116,7 +117,7 @@ def download_product_img(output_info: OutputInfo):
 
         with open(output_path, "wb") as file:
             file.write(response.content)
-        print("Image download completed\n")
+        print("Image download completed")
 
     except requests.HTTPError as e:
         print(f"HTTP Error: {e}")
@@ -129,6 +130,39 @@ def download_product_img(output_info: OutputInfo):
     except Exception as e:
         print(f"Unknown error occurred: {e}")
         sys.exit(1)
+
+
+def product_info_logging(output_info: OutputInfo):
+    log_path = os.path.join(output_info.output_path, 'list.txt')
+
+    # Create a new logger object
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # Set a custom log format
+    formatter = logging.Formatter('%(message)s')
+
+    # Create a log file handler and set the output file name and format
+    file_handler = logging.FileHandler(log_path, encoding='utf-8')
+    file_handler.setFormatter(formatter)
+
+    # Add the log file handler to the logger
+    logger.addHandler(file_handler)
+
+    _ = output_info.product_info
+    logger.info(f"---- [ Product No.{_.index} ] ----")
+    logger.info(f"Brand:          {_.brand}")
+    logger.info(f"Name:           {_.title}")
+    logger.info(f"Retail Price:   ${_.original_price:,}")
+    logger.info(f"Sale Price:     ${_.sale_price:,}")
+    logger.info(f"Estimated cost: ${_.cost:,}")
+    logger.info(f"Selling Price:  ${_.selling_price:,}")
+    logger.info(f"Photo 1 URL:    {_.image1_src}")
+    logger.info(f"Photo 2 URL:    {_.image2_src}")
+    logger.info("")
+
+    # Clean up logger object handler
+    logger.handlers.clear()
 
 
 def image_post_processing(output_info: OutputInfo):
@@ -253,6 +287,7 @@ def uptherestore_product_list(page_source, output_info: OutputInfo):
                 image_post_processing(output_info)
 
                 # Product information logging
+                product_info_logging(output_info)
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
         sys.exit(1)
@@ -266,6 +301,7 @@ def uptherestore_web_scraper(url):
         print("URL is valid, but it does not belong to the uptherestore website.")
         return False
 
+    print("-------------------------- [ Start scraping ] --------------------------")
     brand = url.split("/")[-1]
     print("Brand:", brand)
 
@@ -336,8 +372,10 @@ def uptherestore_web_scraper(url):
     # close browser
     driver.quit()
 
-    # print("Total pages:", total_pages)
-    print("Total valid products:", output_info.product_count)
+    # print(f"Total pages: {total_pages}")
+    print(f"Total valid products: {output_info.product_count}")
+    print("------------------------------------------------------------------------")
+    print("")
 
 
 def main() -> None:

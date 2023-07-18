@@ -24,16 +24,16 @@ import image_editor
 class ProductInfo:
     def __init__(self, index: int, brand: str, title: str,
                  original_price: int, sale_price: int, cost: int, selling_price: int,
-                 image1_src: str, image2_src: str):
+                 image1_src, image2_src):
         self.index = str(index).zfill(3)
         self.brand = brand
         self.title = title.replace("/", "-")  # Replace the forward slash with a hyphen.
-        self.original_price = original_price
-        self.sale_price = sale_price
-        self.cost = cost
-        self.selling_price = selling_price
-        self.image1_src = image1_src
-        self.image2_src = image2_src
+        self.original_price = original_price if original_price is not None else 0
+        self.sale_price = sale_price if sale_price is not None else 0
+        self.cost = cost if cost is not None else 0
+        self.selling_price = selling_price if selling_price is not None else 0
+        self.image1_src = image1_src if image1_src is not None else ""
+        self.image2_src = image2_src if image2_src is not None else ""
 
         self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
@@ -51,17 +51,22 @@ class ProductInfo:
 
 
 class OutputInfo:
-    def __init__(self, group, output_path, product_info):
+    def __init__(self, store_name: str, group, output_path, product_info):
+        self.store_name = store_name
         self.group = group
         self.output_path = output_path
         self.product_count = 0
         self.product_info = product_info
 
     def echo(self):
+        print("Store name:", self.store_name)
         print("Output group:", self.group)
         print("Output path:", self.output_path)
         if self.product_info:
             self.product_info.echo()
+
+
+store_list = ["upthere", "supply"]
 
 
 def print_hi(name):
@@ -177,39 +182,66 @@ def image_post_processing(output_info: OutputInfo):
                   f"{output_info.product_info.title}\n" \
                   f"${output_info.product_info.selling_price:,}"
 
-    try:
-        # Get the size of the original image
-        width, height = image_editor.get_image_size(input_file_path)
+    # Get the size of the original image
+    width, height = image_editor.get_image_size(input_file_path)
 
-        # Resize image for IG Stories (9:16).
-        new_height = int(width * (16 / 9))
+    # Resize image for IG Stories (9:16).
+    new_height = int(width * (16 / 9))
 
+    image_width_to_text_ratio = 29
+    text_size = round(width / image_width_to_text_ratio)
+
+    image_width_to_text_position_x_ratio = 30.53
+    image_height_to_text_position_y_ratio = 7.3
+    text_position = (round(width / image_width_to_text_position_x_ratio),
+                     round(new_height / image_height_to_text_position_y_ratio))
+
+    if output_info.store_name == store_list[0]:  # upthere
+        # To match the background color of upthere store product image
+        background_color = (238, 240, 242)
         # Set the text position above the product image with a specified offset.
-        # text_position = (38, ((new_height - height) / 2) - 200)
-        text_position = (38, 280)
+        # text_position = (38, 280)
+        # text_size = 40
 
+    elif output_info.store_name == store_list[1]:  # supply
+        background_color = (255, 255, 255)  # default is white
+
+    else:
+        print(f"Image post-processing error: invalid store name")
+        sys.exit(1)
+
+    try:
         # Expand the image
-        image_editor.expand_image_with_white_background(input_file_path, output_file_path, (width, new_height))
+        image_editor.expand_and_center_image(input_file_path, output_file_path, (width, new_height),
+                                             background_color)
+    except Exception as e:
+        print(f"Image post-processing [Expand the image] error: {e}")
+        sys.exit(1)
 
+    try:
         # Add a string text to the image
-        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text, text_position)
+        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text,
+                                       text_size, text_position)
+    except Exception as e:
+        print(f"Image post-processing [Add a string text to the image] error:  {e}")
+        sys.exit(1)
 
+    try:
         # Remove unnecessary source file
         image_editor.delete_image(input_file_path)
-
         # shutil.move(output_file_path, input_file_path)
-
     except Exception as e:
-        print(f"Image post-processing error: {e}")
+        print(f"Image post-processing [Remove unnecessary source file] error:  {e}")
         sys.exit(1)
 
 
-def uptherestore_product_price_parser(price_string: str) -> int:
-    price = price_string.split(".")[0].replace(",", "").replace("$", "")
-    return int(price)
+def upthere_store_product_price_parser(price_string: str) -> int:
+    if price_string is not None:
+        return int(price_string.split(".")[0].replace(",", "").replace("$", ""))
+    return 0
 
 
-def uptherestore_product_list(page_source, output_info: OutputInfo):
+def upthere_store_product_list(page_source, output_info: OutputInfo):
     soup = BeautifulSoup(page_source, 'html.parser')
     product_grid_section = soup.find('section', class_='product-grid')
 
@@ -225,10 +257,13 @@ def uptherestore_product_list(page_source, output_info: OutputInfo):
                 sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
 
                 # Parse price string to int
-                original_price = uptherestore_product_price_parser(original_price)
-                sale_price = uptherestore_product_price_parser(sale_price)
+                original_price = upthere_store_product_price_parser(original_price)
+                sale_price = upthere_store_product_price_parser(sale_price)
 
-                cost = round(((sale_price / 1.1) + 850) * 1.16)
+                shipping_fee = 850
+                tw_import_duty_rate = 1.16
+                aus_gst_rate = 0.1  # Goods and Services Tax (GST) in Australia is 10%
+                cost = round(((sale_price / (1 + aus_gst_rate)) + shipping_fee) * tw_import_duty_rate)
 
                 # Profit
                 if cost < 10000:
@@ -293,19 +328,19 @@ def uptherestore_product_list(page_source, output_info: OutputInfo):
         sys.exit(1)
 
 
-def uptherestore_web_scraper(url):
+def upthere_store_web_scraper(url):
     # print("Input URL:", url)
     if check_url_validity(url) is False:
         return False
     if not url.startswith("https://uptherestore.com"):
-        print("URL is valid, but it does not belong to the uptherestore website.")
+        print("URL is valid, but it does not belong to the upthere store website.")
         return False
 
     print("-------------------------- [ Start scraping ] --------------------------")
-    brand = url.split("/")[-1]
-    print("Brand:", brand)
+    section = url.split("/")[-1]
+    print("Section:", section)
 
-    folder_path = os.path.join(".", "output", brand)
+    folder_path = os.path.join(".", "output", store_list[0], section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):
@@ -318,7 +353,7 @@ def uptherestore_web_scraper(url):
     os.makedirs(folder_path)
     os.makedirs(os.path.join(folder_path, "mod"))
 
-    output_info = OutputInfo(brand, folder_path, None)
+    output_info = OutputInfo(store_list[0], section, folder_path, None)
     output_info.echo()
 
     # Set Chrome browser options
@@ -357,7 +392,7 @@ def uptherestore_web_scraper(url):
     # with open("page_source.html", "w", encoding="utf-8") as file:
     #    file.write(page_source)
 
-    uptherestore_product_list(page_source, output_info)
+    upthere_store_product_list(page_source, output_info)
 
     if total_pages >= 2:
         for page in range(2, total_pages + 1):
@@ -367,7 +402,7 @@ def uptherestore_web_scraper(url):
             # The buffering time for the website to fully load.
             sleep(2)
             page_source = driver.page_source
-            uptherestore_product_list(page_source, output_info)
+            upthere_store_product_list(page_source, output_info)
 
     # close browser
     driver.quit()
@@ -378,35 +413,256 @@ def uptherestore_web_scraper(url):
     print("")
 
 
+def supply_store_product_price_parser(price_string: str) -> int:
+    if price_string is not None:
+        return round(float(price_string.replace(',', '').replace('$', '')))
+    return 0
+
+
+def supply_store_product_list(page_source, output_info: OutputInfo):
+    soup = BeautifulSoup(page_source, 'html.parser')
+    product_grid_section = soup.find('section', class_='list-section')
+
+    if product_grid_section is not None:
+        product_subtitles = product_grid_section.find_all('form', method="post")
+
+        for subtitle in product_subtitles:
+            # Find the first image URL
+            image1_element = subtitle.find('img', class_='object-contain')
+            try:
+                image1_src = image1_element['src']
+                image2_src = None
+            except (AttributeError, TypeError):
+                print("Image source not found")
+                sys.exit(1)
+
+            # Find the brand
+            brand_element = subtitle.find('div', class_='product-itme-brand')
+            try:
+                brand = brand_element.text.strip()
+            except (AttributeError, TypeError):
+                print("Brand not found")
+                sys.exit(1)
+
+            # Find the title
+            title_element = subtitle.find('a', class_='product-item-link')
+            try:
+                title = title_element.text.strip()
+                if brand in title:
+                    title = title.replace(brand, "").strip()
+            except (AttributeError, TypeError):
+                print("Title not found")
+                sys.exit(1)
+
+            # Find the sale price
+            sale_price_element = subtitle.find('span', class_='price-label', string='As low as')
+            try:
+                sale_price = sale_price_element.find_next('span', class_='price').text.strip()
+            except (AttributeError, TypeError):
+                print("Sale Price not found")
+                sys.exit(1)
+
+            # Find the regular price
+            original_price_element = subtitle.find('span', class_='price-label', string='Regular Price')
+            try:
+                original_price = original_price_element.find_next('span', class_='price').text.strip()
+            except (AttributeError, TypeError):
+                original_price = sale_price
+                # print("Regular Price not found")
+
+            aud_twd = 22  # currency rate AUD/TWD
+            # Parse price string to int
+            original_price = supply_store_product_price_parser(original_price) * aud_twd
+            sale_price = supply_store_product_price_parser(sale_price) * aud_twd
+
+            shipping_fee = 850
+            tw_import_duty_rate = 1.16
+            cost = round((sale_price + shipping_fee) * tw_import_duty_rate)
+
+            # Profit
+            if cost < 10000:
+                if cost < 4000:
+                    selling_price = cost + 300
+                elif cost < 6000:
+                    selling_price = cost + 400
+                elif cost < 8000:
+                    selling_price = cost + 500
+                else:
+                    selling_price = cost + 600
+            else:
+                selling_price = cost * 1.063  # 6.3% profit
+
+            # Round the price to the nearest even ten
+            selling_price = round(selling_price / 20) * 20
+
+            if selling_price > original_price:
+                continue
+
+            # Product image parsing and post-processing
+
+            output_info.product_count += 1
+            output_info.product_info = ProductInfo(output_info.product_count, brand, title,
+                                                   original_price, sale_price, cost, selling_price,
+                                                   image1_src, image2_src)
+            output_info.product_info.echo()
+
+            # Download product image
+            download_product_img(output_info)
+
+            # Image post-processing
+            image_post_processing(output_info)
+
+            # Product information logging
+            product_info_logging(output_info)
+    else:
+        print("Pattern not found \"<section class='product-grid'>\"")
+        sys.exit(1)
+
+
+def supply_store_web_scraper(url):
+    # print("Input URL:", url)
+    if check_url_validity(url) is False:
+        return False
+    if not url.startswith("https://www.supplystore.com.au"):
+        print("URL is valid, but it does not belong to the supply store website.")
+        return False
+
+    print("-------------------------- [ Start scraping ] --------------------------")
+    section = url.split("/")[-1]
+    print("Section:", section)
+
+    folder_path = os.path.join(".", "output", store_list[1], section)
+
+    # Clean up the old output directory
+    if os.path.exists(folder_path):
+        if os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
+        else:
+            print("Path is not a directory:", folder_path)
+            sys.exit(1)
+
+    os.makedirs(folder_path)
+    os.makedirs(os.path.join(folder_path, "mod"))
+
+    output_info = OutputInfo(store_list[1], section, folder_path, None)
+    output_info.echo()
+
+    # Set Chrome browser options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
+
+    # Create an instance of Chrome browser
+    driver = webdriver.Chrome(options=chrome_options)
+
+    driver.get(url)
+    # The buffering time for the website to fully load.
+    sleep(2)
+    page_source = driver.page_source
+
+    # # Write the page source to a file
+    # with open("page_source.html", "w", encoding="utf-8") as file:
+    #    file.write(page_source)
+    # sys.exit(0)
+
+    total_pages = max_pages = 1
+
+    while True:
+        # Parsing HTML using BeautifulSoup
+        soup = BeautifulSoup(page_source, 'html.parser')
+
+        # Find all <span> elements containing page numbers
+        span_elements = soup.find_all('span', class_='sr-only label')
+
+        # Iterate through all <span> elements, extract page numbers, and add them to the page list
+        for span_element in span_elements:
+            try:
+                # Check if the <span> tag represents a page,
+                # then get the text of the next <span> tag, which is the page number
+                if span_element.text.strip() == 'Page':
+                    page_number = int(span_element.find_next('span').text)
+                    max_pages = max(max_pages, page_number)
+
+                elif span_element.text.strip() == "You're currently reading page":
+                    page_number = int(span_element.find_next('span', class_="line-through").text)
+                    max_pages = max(max_pages, page_number)
+
+            except ValueError:
+                pass
+
+        if max_pages == total_pages:
+            break
+
+        total_pages = max(total_pages, max_pages)
+
+        new_url = url + f"?p={max_pages}"
+        driver.get(new_url)
+        sleep(2)
+        page_source = driver.page_source
+
+    driver.get(url)
+    sleep(2)
+    page_source = driver.page_source
+
+    supply_store_product_list(page_source, output_info)
+
+    if total_pages >= 2:
+        for page in range(2, total_pages + 1):
+            new_url = url + f"?p={page}"
+            # print(new_url)
+            driver.get(new_url)
+            # The buffering time for the website to fully load.
+            sleep(2)
+            page_source = driver.page_source
+            supply_store_product_list(page_source, output_info)
+
+    # close browser
+    driver.quit()
+
+    print(f"Total pages: {total_pages}")
+    print(f"Total valid products: {output_info.product_count}")
+    print("------------------------------------------------------------------------")
+    print("")
+
+
+def upthere_store() -> None:
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Needles")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/MHL.")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nike")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
+
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Asics")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Reebok")
+    # upthere_store_web_scraper("https://uptherestore.com/collections/sale/Salomon")  # bug
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
+
+    # Accessories
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Maple")
+    upthere_store_web_scraper("https://uptherestore.com/collections/sale/bleue-burnham")
+
+    # Error cases, invalid URL
+    # upthere_store_web_scraper("http://www.invalid-domain.com")
+    # upthere_store_web_scraper("https://www.example.com")
+    # upthere_store_web_scraper("https://www.example.com/nonexistent-page")
+    # upthere_store_web_scraper("https://www.example.com/internal-server-error")
+
+
+def supply_store() -> None:
+    supply_store_web_scraper("https://www.supplystore.com.au/sale")
+
+
 def main() -> None:
     # print_hi('PyCharm')
 
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Needles")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/MHL.")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
-
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Asics")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Reebok")
-    # uptherestore_web_scraper("https://uptherestore.com/collections/sale/Salomon")  # bug
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
-
-    # Accessories
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/Maple")
-    uptherestore_web_scraper("https://uptherestore.com/collections/sale/bleue-burnham")
-
-    # Error cases, invalid URL
-    # uptherestore_web_parser("http://www.invalid-domain.com")
-    # uptherestore_web_parser("https://www.example.com")
-    # uptherestore_web_parser("https://www.example.com/nonexistent-page")
-    # uptherestore_web_parser("https://www.example.com/internal-server-error")
+    upthere_store()
+    supply_store()
 
 
 if __name__ == '__main__':

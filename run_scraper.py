@@ -85,6 +85,24 @@ def convert_seconds_to_time(sec):
     return _days, _hours, _minutes, _seconds
 
 
+def get_aud_exchange_rate() -> float | None:
+    # Refer to the real-time exchange rates of Bank of Taiwan
+    url = "https://rate.bot.com.tw/xrt?Lang=en-US"
+
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find the spot selling rate for Australian Dollar (AUD).
+    currency_rows = soup.select("tbody tr")
+    for row in currency_rows:
+        currency_name = row.select_one("td.currency div.visible-phone.print_hide").text.strip()
+        if currency_name == "Australian Dollar (AUD)":
+            exchange_rate = row.select_one("td[data-table='Spot Selling']").text.strip()
+            return float(exchange_rate)
+
+    return None
+
+
 def check_url_validity(url):
     try:
         response = requests.head(url)
@@ -97,7 +115,6 @@ def check_url_validity(url):
     except requests.exceptions.RequestException as e:
         # An exception occurred during the request
         print("Error occurred while checking URL validity:", e)
-        # sys.exit(1)
         return False
 
 
@@ -413,10 +430,10 @@ def upthere_store_web_scraper(url):
     print("")
 
 
-def supply_store_product_price_parser(price_string: str) -> int:
+def supply_store_product_price_parser(price_string: str) -> int | None:
     if price_string is not None:
         return round(float(price_string.replace(',', '').replace('$', '')))
-    return 0
+    return None
 
 
 def supply_store_product_list(page_source, output_info: OutputInfo):
@@ -470,10 +487,12 @@ def supply_store_product_list(page_source, output_info: OutputInfo):
                 original_price = sale_price
                 # print("Regular Price not found")
 
-            aud_twd = 22  # currency rate AUD/TWD
+            margin = 1.03
+            aud_twd = get_aud_exchange_rate() * margin
+
             # Parse price string to int
-            original_price = supply_store_product_price_parser(original_price) * aud_twd
-            sale_price = supply_store_product_price_parser(sale_price) * aud_twd
+            original_price = round(supply_store_product_price_parser(original_price) * aud_twd)
+            sale_price = round(supply_store_product_price_parser(sale_price) * aud_twd)
 
             shipping_fee = 850
             tw_import_duty_rate = 1.16
@@ -661,6 +680,12 @@ def supply_store() -> None:
 def main() -> None:
     # print_hi('PyCharm')
 
+    aud_exchange_rate = get_aud_exchange_rate()
+    if aud_exchange_rate is None:
+        print(f"Unable to find the exchange rate for Australian Dollar (AUD)")
+        return
+
+    print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")
     upthere_store()
     supply_store()
 

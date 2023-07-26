@@ -1,4 +1,3 @@
-# This is a sample Python script.
 import logging
 import os
 import shutil
@@ -7,6 +6,7 @@ import time
 import timeit
 from datetime import timedelta
 from time import sleep
+from typing import Callable
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,6 +19,18 @@ import image_editor
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+
+class InvalidInputError(Exception):
+    pass
+
+
+class StoreWebScraper:
+    def __init__(self, store_data: dict, store_name: str, web_scraper_func: Callable[[str], None]):
+        store_data[store_name] = store_name
+        self.__web_scraper = web_scraper_func
+
+    def execute_scraper(self, url: str):
+        return self.__web_scraper(url)
 
 
 class ProductInfo:
@@ -37,8 +49,9 @@ class ProductInfo:
 
         self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
-    def echo(self):
-        print(f"---- [ Product No.{self.index} ] ----")
+    def display_info(self):
+        print()
+        print(f"-------- [ Product No.{self.index} ] --------")
         print(f"Brand:          {self.brand}")
         print(f"Name:           {self.title}")
         print(f"Retail Price:   ${self.original_price:,}")
@@ -58,102 +71,95 @@ class OutputInfo:
         self.product_count = 0
         self.product_info = product_info
 
-    def echo(self):
+    def display_info(self):
         print("Store name:", self.store_name)
         print("Output group:", self.group)
         print("Output path:", self.output_path)
         if self.product_info:
-            self.product_info.echo()
+            self.product_info.display_info()
 
 
-store_list = ["upthere", "supply"]
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
+# Helper function to convert seconds to days, hours, minutes, and seconds
 def convert_seconds_to_time(sec):
     duration = timedelta(seconds=sec)
-
     _days = duration.days
     _hours = duration.seconds // 3600
     _minutes = (duration.seconds // 60) % 60
     _seconds = duration.seconds % 60
-
     return _days, _hours, _minutes, _seconds
 
 
-def get_aud_exchange_rate() -> float | None:
-    # Refer to the real-time exchange rates of Bank of Taiwan
+# Helper function to get the exchange rate for Australian Dollar (AUD) from Bank of Taiwan
+def get_aud_exchange_rate() -> float:
     url = "https://rate.bot.com.tw/xrt?Lang=en-US"
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+        # Find the spot selling rate for Australian Dollar (AUD).
+        currency_rows = soup.select("tbody tr")
+        for row in currency_rows:
+            currency_name = row.select_one("td.currency div.visible-phone.print_hide").text.strip()
+            if currency_name == "Australian Dollar (AUD)":
+                exchange_rate = row.select_one("td[data-table='Spot Selling']").text.strip()
+                return float(exchange_rate)
 
-    # Find the spot selling rate for Australian Dollar (AUD).
-    currency_rows = soup.select("tbody tr")
-    for row in currency_rows:
-        currency_name = row.select_one("td.currency div.visible-phone.print_hide").text.strip()
-        if currency_name == "Australian Dollar (AUD)":
-            exchange_rate = row.select_one("td[data-table='Spot Selling']").text.strip()
-            return float(exchange_rate)
-
-    return None
+    except requests.exceptions.RequestException as req:
+        print("Error occurred while fetching exchange rate:", req)
+        raise req
 
 
-def check_url_validity(url):
+# Helper function to check the validity of a URL
+def check_url_validity(url: str) -> bool:
     try:
         response = requests.head(url)
         if response.status_code == requests.codes.ok:
-            # print("URL is valid.")
             return True
         else:
             print("URL is invalid. Status code:", response.status_code)
             return False
     except requests.exceptions.RequestException as e:
-        # An exception occurred during the request
         print("Error occurred while checking URL validity:", e)
         return False
 
 
+# Helper function to download a product image
 def download_product_img(output_info: OutputInfo):
     output_path = os.path.join(output_info.output_path, output_info.product_info.image1_filename)
-    print(f"Image download to path: {output_path}")
-
     url = output_info.product_info.image1_src
-    # print(f"download img url: {url}")
 
     if output_path is None or not isinstance(output_path, str):
-        print(f"Invalid output_path parameter. {download_product_img.__name__}")
-        sys.exit(1)
+        raise InvalidInputError(
+            f"Invalid output_path parameter: '{output_path}' "
+            f"({download_product_img.__name__})"
+        )
 
     if url is None or not isinstance(url, str):
-        print(f"Invalid url parameter. {download_product_img.__name__}")
-        sys.exit(1)
+        raise InvalidInputError(f"Invalid url parameter: '{url}' ({download_product_img.__name__})")
 
     try:
         response = requests.get(url)
         response.raise_for_status()  # Check if the download is successful, raise an exception if there is an error
 
+        print(f"Image download to path: {output_path}")
         with open(output_path, "wb") as file:
             file.write(response.content)
         print("Image download completed")
 
     except requests.HTTPError as e:
         print(f"HTTP Error: {e}")
-        sys.exit(1)
+        raise e
 
     except requests.RequestException as e:
         print(f"Error occurred while downloading the image: {e}")
-        sys.exit(1)
+        raise e
 
     except Exception as e:
         print(f"Unknown error occurred: {e}")
-        sys.exit(1)
+        raise e
 
 
+# Helper function to log product information to a file
 def product_info_logging(output_info: OutputInfo):
     log_path = os.path.join(output_info.output_path, 'list.txt')
 
@@ -213,16 +219,20 @@ def image_post_processing(output_info: OutputInfo):
     text_position = (round(width / image_width_to_text_position_x_ratio),
                      round(new_height / image_height_to_text_position_y_ratio))
 
-    if output_info.store_name == store_list[0]:  # upthere
-        # To match the background color of upthere store product image
-        background_color = (238, 240, 242)
-        # Set the text position above the product image with a specified offset.
-        # text_position = (38, 280)
-        # text_size = 40
+    if store_name_dict[output_info.store_name] == output_info.store_name:
+        if output_info.store_name == "upthere":
+            # To match the background color of upthere store product image
+            background_color = (238, 240, 242)
+            # Set the text position above the product image with a specified offset.
+            # text_position = (38, 280)
+            # text_size = 40
 
-    elif output_info.store_name == store_list[1]:  # supply
-        background_color = (255, 255, 255)  # default is white
+        elif output_info.store_name == "supply":
+            background_color = (255, 255, 255)  # default is white
 
+        else:
+            print(f"Image post-processing error: invalid store name")
+            sys.exit(1)
     else:
         print(f"Image post-processing error: invalid store name")
         sys.exit(1)
@@ -233,7 +243,7 @@ def image_post_processing(output_info: OutputInfo):
                                              background_color)
     except Exception as e:
         print(f"Image post-processing [Expand the image] error: {e}")
-        sys.exit(1)
+        raise e
 
     try:
         # Add a string text to the image
@@ -241,7 +251,7 @@ def image_post_processing(output_info: OutputInfo):
                                        text_size, text_position)
     except Exception as e:
         print(f"Image post-processing [Add a string text to the image] error:  {e}")
-        sys.exit(1)
+        raise e
 
     try:
         # Remove unnecessary source file
@@ -249,7 +259,9 @@ def image_post_processing(output_info: OutputInfo):
         # shutil.move(output_file_path, input_file_path)
     except Exception as e:
         print(f"Image post-processing [Remove unnecessary source file] error:  {e}")
-        sys.exit(1)
+        raise e
+
+    print("Image post-processing completed")
 
 
 def upthere_store_product_price_parser(price_string: str) -> int:
@@ -330,22 +342,26 @@ def upthere_store_product_list(page_source, output_info: OutputInfo):
                 output_info.product_info = ProductInfo(output_info.product_count, brand, title,
                                                        original_price, sale_price, cost, selling_price,
                                                        image1_src, image2_src)
-                output_info.product_info.echo()
+                output_info.product_info.display_info()
 
-                # Download product image
-                download_product_img(output_info)
+                try:
+                    # Download product image
+                    download_product_img(output_info)
 
-                # Image post-processing
-                image_post_processing(output_info)
+                    # Image post-processing
+                    image_post_processing(output_info)
 
-                # Product information logging
-                product_info_logging(output_info)
+                    # Product information logging
+                    product_info_logging(output_info)
+
+                except Exception as e:
+                    print(f"Image processing failed, error occurred: {e}")
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
         sys.exit(1)
 
 
-def upthere_store_web_scraper(url):
+def upthere_store_web_scraper(url: str) -> None | bool:
     # print("Input URL:", url)
     if check_url_validity(url) is False:
         return False
@@ -357,7 +373,7 @@ def upthere_store_web_scraper(url):
     section = url.split("/")[-1]
     print("Section:", section)
 
-    folder_path = os.path.join(".", "output", store_list[0], section)
+    folder_path = os.path.join(".", "output", "upthere", section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):
@@ -365,13 +381,13 @@ def upthere_store_web_scraper(url):
             shutil.rmtree(folder_path)
         else:
             print("Path is not a directory:", folder_path)
-            sys.exit(1)
+            return False
 
     os.makedirs(folder_path)
     os.makedirs(os.path.join(folder_path, "mod"))
 
-    output_info = OutputInfo(store_list[0], section, folder_path, None)
-    output_info.echo()
+    output_info = OutputInfo("upthere", section, folder_path, None)
+    output_info.display_info()
 
     # Set Chrome browser options
     chrome_options = Options()
@@ -409,25 +425,29 @@ def upthere_store_web_scraper(url):
     # with open("page_source.html", "w", encoding="utf-8") as file:
     #    file.write(page_source)
 
-    upthere_store_product_list(page_source, output_info)
+    try:
+        upthere_store_product_list(page_source, output_info)
 
-    if total_pages >= 2:
-        for page in range(2, total_pages + 1):
-            new_url = url + f"?page={page}"
-            # print(new_url)
-            driver.get(new_url)
-            # The buffering time for the website to fully load.
-            sleep(2)
-            page_source = driver.page_source
-            upthere_store_product_list(page_source, output_info)
+        if total_pages >= 2:
+            for page in range(2, total_pages + 1):
+                new_url = url + f"?page={page}"
+                # print(new_url)
+                driver.get(new_url)
+                # The buffering time for the website to fully load.
+                sleep(2)
+                page_source = driver.page_source
+                upthere_store_product_list(page_source, output_info)
+
+    except Exception as e:
+        print(f"Scraping error: {e}")
+        raise e
 
     # close browser
     driver.quit()
 
     # print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
-    print("------------------------------------------------------------------------")
-    print("")
+    print("------------------------------------------------------------------------\n")
 
 
 def supply_store_product_price_parser(price_string: str) -> int | None:
@@ -523,22 +543,26 @@ def supply_store_product_list(page_source, output_info: OutputInfo):
             output_info.product_info = ProductInfo(output_info.product_count, brand, title,
                                                    original_price, sale_price, cost, selling_price,
                                                    image1_src, image2_src)
-            output_info.product_info.echo()
+            output_info.product_info.display_info()
 
-            # Download product image
-            download_product_img(output_info)
+            try:
+                # Download product image
+                download_product_img(output_info)
 
-            # Image post-processing
-            image_post_processing(output_info)
+                # Image post-processing
+                image_post_processing(output_info)
 
-            # Product information logging
-            product_info_logging(output_info)
+                # Product information logging
+                product_info_logging(output_info)
+
+            except Exception as e:
+                print(f"Image processing failed, error occurred: {e}")
     else:
         print("Pattern not found \"<section class='product-grid'>\"")
         sys.exit(1)
 
 
-def supply_store_web_scraper(url):
+def supply_store_web_scraper(url: str) -> None | bool:
     # print("Input URL:", url)
     if check_url_validity(url) is False:
         return False
@@ -550,7 +574,7 @@ def supply_store_web_scraper(url):
     section = url.split("/")[-1]
     print("Section:", section)
 
-    folder_path = os.path.join(".", "output", store_list[1], section)
+    folder_path = os.path.join(".", "output", "supply", section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):
@@ -558,13 +582,13 @@ def supply_store_web_scraper(url):
             shutil.rmtree(folder_path)
         else:
             print("Path is not a directory:", folder_path)
-            sys.exit(1)
+            return False
 
     os.makedirs(folder_path)
     os.makedirs(os.path.join(folder_path, "mod"))
 
-    output_info = OutputInfo(store_list[1], section, folder_path, None)
-    output_info.echo()
+    output_info = OutputInfo("supply", section, folder_path, None)
+    output_info.display_info()
 
     # Set Chrome browser options
     chrome_options = Options()
@@ -623,64 +647,76 @@ def supply_store_web_scraper(url):
     sleep(2)
     page_source = driver.page_source
 
-    supply_store_product_list(page_source, output_info)
+    try:
+        supply_store_product_list(page_source, output_info)
 
-    if total_pages >= 2:
-        for page in range(2, total_pages + 1):
-            new_url = url + f"?p={page}"
-            # print(new_url)
-            driver.get(new_url)
-            # The buffering time for the website to fully load.
-            sleep(2)
-            page_source = driver.page_source
-            supply_store_product_list(page_source, output_info)
+        if total_pages >= 2:
+            for page in range(2, total_pages + 1):
+                new_url = url + f"?p={page}"
+                # print(new_url)
+                driver.get(new_url)
+                # The buffering time for the website to fully load.
+                sleep(2)
+                page_source = driver.page_source
+                supply_store_product_list(page_source, output_info)
+
+    except Exception as e:
+        print(f"Scraping error: {e}")
+        raise e
 
     # close browser
     driver.quit()
 
-    print(f"Total pages: {total_pages}")
+    # print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
-    print("------------------------------------------------------------------------")
-    print("")
+    print("------------------------------------------------------------------------\n")
 
 
 def upthere_store() -> None:
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Needles")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/beams-plus")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Norse-Projects")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Engineered-Garments")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/MHL.")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nike")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nike-ACG")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Nanamica")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Gramicci")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/4SDesigns")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Medicom-Toy")
+    urls = [
+        "https://uptherestore.com/collections/sale/Needles",
+        "https://uptherestore.com/collections/sale/beams-plus",
+        "https://uptherestore.com/collections/sale/Norse-Projects",
+        "https://uptherestore.com/collections/sale/Engineered-Garments",
+        "https://uptherestore.com/collections/sale/MHL.",
+        "https://uptherestore.com/collections/sale/Nike",
+        "https://uptherestore.com/collections/sale/Nike-ACG",
+        "https://uptherestore.com/collections/sale/Nanamica",
+        "https://uptherestore.com/collections/sale/Gramicci",
+        "https://uptherestore.com/collections/sale/4SDesigns",
+        "https://uptherestore.com/collections/sale/Medicom-Toy",
+        "https://uptherestore.com/collections/sale/Asics",
+        "https://uptherestore.com/collections/sale/Reebok",
+        # "https://uptherestore.com/collections/sale/Salomon",  # Bug
+        "https://uptherestore.com/collections/sale/New-Balance",
 
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Asics")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Reebok")
-    # upthere_store_web_scraper("https://uptherestore.com/collections/sale/Salomon")  # bug
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/New-Balance")
+        # Accessories
+        "https://uptherestore.com/collections/sale/Maple",
+        "https://uptherestore.com/collections/sale/bleue-burnham"
+    ]
 
-    # Accessories
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/Maple")
-    upthere_store_web_scraper("https://uptherestore.com/collections/sale/bleue-burnham")
+    for url in urls:
+        upthere.execute_scraper(url)
 
     # Error cases, invalid URL
-    # upthere_store_web_scraper("http://www.invalid-domain.com")
-    # upthere_store_web_scraper("https://www.example.com")
-    # upthere_store_web_scraper("https://www.example.com/nonexistent-page")
-    # upthere_store_web_scraper("https://www.example.com/internal-server-error")
+    # upthere.execute_scraper("http://www.invalid-domain.com")
+    # upthere.execute_scraper("https://www.example.com")
+    # upthere.execute_scraper("https://www.example.com/nonexistent-page")
+    # upthere.execute_scraper("https://www.example.com/internal-server-error")
 
 
 def supply_store() -> None:
-    supply_store_web_scraper("https://www.supplystore.com.au/sale")
+    supply.execute_scraper("https://www.supplystore.com.au/sale")
 
 
 def main() -> None:
-    # print_hi('PyCharm')
+    try:
+        aud_exchange_rate = get_aud_exchange_rate()
 
-    aud_exchange_rate = get_aud_exchange_rate()
+    except Exception as e:
+        print(f"Error occurred during get_aud_exchange_rate(): {e}")
+        aud_exchange_rate = None
+
     if aud_exchange_rate is None:
         print(f"Unable to find the exchange rate for Australian Dollar (AUD)")
         return
@@ -691,6 +727,10 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    store_name_dict = {}
+    upthere = StoreWebScraper(store_name_dict, "upthere", upthere_store_web_scraper)
+    supply = StoreWebScraper(store_name_dict, "supply", supply_store_web_scraper)
+
     start_time = time.perf_counter()
 
     # main()
@@ -704,5 +744,3 @@ if __name__ == '__main__':
 
     days, hours, minutes, seconds = convert_seconds_to_time(execution_time / 1e3)
     print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec")
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

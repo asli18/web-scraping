@@ -1,11 +1,9 @@
 import logging
 import os
 import shutil
-import sys
 import time
 import timeit
 from datetime import timedelta
-from time import sleep
 from typing import Callable
 
 import requests
@@ -13,6 +11,8 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support.ui import WebDriverWait
 
 import image_editor
 
@@ -232,10 +232,10 @@ def image_post_processing(output_info: OutputInfo):
 
         else:
             print(f"Image post-processing error: invalid store name")
-            sys.exit(1)
+            raise InvalidInputError("invalid store name")
     else:
         print(f"Image post-processing error: invalid store name")
-        sys.exit(1)
+        raise InvalidInputError("invalid store name")
 
     try:
         # Expand the image
@@ -243,7 +243,7 @@ def image_post_processing(output_info: OutputInfo):
                                              background_color)
     except Exception as e:
         print(f"Image post-processing [Expand the image] error: {e}")
-        raise e
+        raise
 
     try:
         # Add a string text to the image
@@ -251,7 +251,7 @@ def image_post_processing(output_info: OutputInfo):
                                        text_size, text_position)
     except Exception as e:
         print(f"Image post-processing [Add a string text to the image] error:  {e}")
-        raise e
+        raise
 
     try:
         # Remove unnecessary source file
@@ -259,7 +259,7 @@ def image_post_processing(output_info: OutputInfo):
         # shutil.move(output_file_path, input_file_path)
     except Exception as e:
         print(f"Image post-processing [Remove unnecessary source file] error:  {e}")
-        raise e
+        raise
 
     print("Image post-processing completed")
 
@@ -271,94 +271,92 @@ def upthere_store_product_price_parser(price_string: str) -> int:
 
 
 def upthere_store_product_list(page_source, output_info: OutputInfo):
-    soup = BeautifulSoup(page_source, 'html.parser')
-    product_grid_section = soup.find('section', class_='product-grid')
-
-    if product_grid_section is not None:
-        product_subtitles = product_grid_section.find_all('div', class_='product__subtitle')
-        for subtitle in product_subtitles:
-            if 'Sale' in subtitle.text:
-                # print("subtitle:" + subtitle.text)
-
-                brand = subtitle.find('span').contents[0].strip().split('\n')[0]
-                title = subtitle.find_next('div', class_='product__title').text.strip()
-                original_price = subtitle.find_next('del', class_='price__amount').text.strip()
-                sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
-
-                # Parse price string to int
-                original_price = upthere_store_product_price_parser(original_price)
-                sale_price = upthere_store_product_price_parser(sale_price)
-
-                shipping_fee = 850
-                tw_import_duty_rate = 1.16
-                aus_gst_rate = 0.1  # Goods and Services Tax (GST) in Australia is 10%
-                cost = round(((sale_price / (1 + aus_gst_rate)) + shipping_fee) * tw_import_duty_rate)
-
-                # Profit
-                if cost < 10000:
-                    if cost < 4000:
-                        selling_price = cost + 300
-                    elif cost < 6000:
-                        selling_price = cost + 400
-                    elif cost < 8000:
-                        selling_price = cost + 500
-                    else:
-                        selling_price = cost + 600
-                else:
-                    selling_price = cost * 1.063  # 6.3% profit
-
-                # Round the price to the nearest even ten
-                selling_price = round(selling_price / 20) * 20
-
-                if selling_price > original_price:
-                    continue
-
-                # Product image parsing and post-processing
-
-                # Find the second image URL
-                image2_element = subtitle.find_previous('figure', class_='product__image')
-                try:
-                    image2_src = image2_element.find('img')['src']
-                    image2_src = "https:" + image2_src
-                except (AttributeError, TypeError):
-                    # Second figure might be a video
-                    image2_src = None
-
-                # Find the second image or video URL
-                # image2_element = subtitle.find_previous('figure', class_='product__image').find(
-                #    lambda tag: tag.name in ['img', 'source']) # figure: img, video: source
-                # image2_src = image2_element['src'] if image2_element else None
-
-                # Find the first image or video URL
-                image1_element = subtitle.find_previous('figure', class_='product__image').find_previous('figure')
-                if image1_element:
-                    image1_element = image1_element.find(lambda tag: tag.name in ['img', 'source'])
-                    image1_src = image1_element.get('src')
-                    image1_src = "https:" + image1_src
-                else:
-                    image1_src = None
-
-                output_info.product_count += 1
-                output_info.product_info = ProductInfo(output_info.product_count, brand, title,
-                                                       original_price, sale_price, cost, selling_price,
-                                                       image1_src, image2_src)
-                output_info.product_info.display_info()
-
-                try:
-                    # Download product image
-                    download_product_img(output_info)
-
-                    # Image post-processing
-                    image_post_processing(output_info)
-
-                    # Product information logging
-                    product_info_logging(output_info)
-
-                except Exception as e:
-                    print(f"Image processing failed, error occurred: {e}")
-    else:
+    try:
+        soup = BeautifulSoup(page_source, 'html.parser')
+        product_grid_section = soup.find('section', class_='product-grid')
+    except Exception:
         print("Pattern not found \"<section class='product-grid'>\"")
-        sys.exit(1)
+        raise
+
+    product_subtitles = product_grid_section.find_all('div', class_='product__subtitle')
+    for subtitle in product_subtitles:
+        if 'Sale' in subtitle.text:
+            # print("subtitle:" + subtitle.text)
+
+            brand = subtitle.find('span').contents[0].strip().split('\n')[0]
+            title = subtitle.find_next('div', class_='product__title').text.strip()
+            original_price = subtitle.find_next('del', class_='price__amount').text.strip()
+            sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
+
+            # Parse price string to int
+            original_price = upthere_store_product_price_parser(original_price)
+            sale_price = upthere_store_product_price_parser(sale_price)
+
+            shipping_fee = 850
+            tw_import_duty_rate = 1.16
+            aus_gst_rate = 0.1  # Goods and Services Tax (GST) in Australia is 10%
+            cost = round(((sale_price / (1 + aus_gst_rate)) + shipping_fee) * tw_import_duty_rate)
+
+            # Profit
+            if cost < 10000:
+                if cost < 4000:
+                    selling_price = cost + 300
+                elif cost < 6000:
+                    selling_price = cost + 400
+                elif cost < 8000:
+                    selling_price = cost + 500
+                else:
+                    selling_price = cost + 600
+            else:
+                selling_price = cost * 1.063  # 6.3% profit
+
+            # Round the price to the nearest even ten
+            selling_price = round(selling_price / 20) * 20
+
+            if selling_price > original_price:
+                continue
+
+            # Product image parsing and post-processing
+
+            # Find the second image URL
+            image2_element = subtitle.find_previous('figure', class_='product__image')
+            try:
+                image2_src = image2_element.find('img')['src']
+                image2_src = "https:" + image2_src
+            except (AttributeError, TypeError):
+                # Second figure might be a video
+                image2_src = None
+
+            # Find the second image or video URL
+            # image2_element = subtitle.find_previous('figure', class_='product__image').find(
+            #    lambda tag: tag.name in ['img', 'source']) # figure: img, video: source
+            # image2_src = image2_element['src'] if image2_element else None
+
+            # Find the first image or video URL
+            image1_element = subtitle.find_previous('figure', class_='product__image').find_previous('figure')
+            if image1_element:
+                image1_element = image1_element.find(lambda tag: tag.name in ['img', 'source'])
+                image1_src = image1_element.get('src')
+                image1_src = "https:" + image1_src
+            else:
+                image1_src = None
+
+            output_info.product_count += 1
+            output_info.product_info = ProductInfo(output_info.product_count, brand, title,
+                                                   original_price, sale_price, cost, selling_price,
+                                                   image1_src, image2_src)
+            output_info.product_info.display_info()
+
+            try:
+                # Download product image
+                download_product_img(output_info)
+                # Image post-processing
+                image_post_processing(output_info)
+                # Product information logging
+                product_info_logging(output_info)
+            except Exception as e:
+                print(f"Image processing failed, error occurred: {e}")
+                raise
 
 
 def upthere_store_web_scraper(url: str) -> None | bool:
@@ -396,36 +394,41 @@ def upthere_store_web_scraper(url: str) -> None | bool:
 
     # Create an instance of Chrome browser
     driver = webdriver.Chrome(options=chrome_options)
-    driver.get(url)
-    sleep(2)
-    page_source = driver.page_source
-
-    # Find the pagination section on the webpage
-    pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
-    page_elements = pagination_element.find_elements(By.TAG_NAME, "li")
-
-    if len(page_elements) == 0:
-        # Only one page
-        total_pages = 1
-    else:
-        # Exclude the first and last navigation elements
-        page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
-
-        # Check if the last page is included in the pagination
-        last_page_element = page_elements[-2]
-        last_page_number = last_page_element.text.strip()
-
-        if last_page_number.isdigit():
-            page_numbers.append(last_page_number)
-
-        # Get the total number of pages
-        total_pages = max([int(num) for num in page_numbers])
-
-    # Write the page source to a file
-    # with open("page_source.html", "w", encoding="utf-8") as file:
-    #    file.write(page_source)
 
     try:
+        # Wait for up to 3 seconds for the element to appear, throw an exception if not found.
+        driver.implicitly_wait(3)
+
+        driver.get(url)
+        WebDriverWait(driver, 3).until(
+            ec.presence_of_element_located((By.CSS_SELECTOR, '.boost-pfs-filter-bottom-pagination')))
+        page_source = driver.page_source
+
+        # Find the pagination section on the webpage
+        pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
+        page_elements = pagination_element.find_elements(By.TAG_NAME, "li")
+
+        if len(page_elements) == 0:
+            # Only one page
+            total_pages = 1
+        else:
+            # Exclude the first and last navigation elements
+            page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
+
+            # Check if the last page is included in the pagination
+            last_page_element = page_elements[-2]
+            last_page_number = last_page_element.text.strip()
+
+            if last_page_number.isdigit():
+                page_numbers.append(last_page_number)
+
+            # Get the total number of pages
+            total_pages = max([int(num) for num in page_numbers])
+
+        # Write the page source to a file
+        # with open("page_source.html", "w", encoding="utf-8") as file:
+        #    file.write(page_source)
+
         upthere_store_product_list(page_source, output_info)
 
         if total_pages >= 2:
@@ -433,18 +436,18 @@ def upthere_store_web_scraper(url: str) -> None | bool:
                 new_url = url + f"?page={page}"
                 # print(new_url)
                 driver.get(new_url)
-                # The buffering time for the website to fully load.
-                sleep(2)
                 page_source = driver.page_source
                 upthere_store_product_list(page_source, output_info)
 
     except Exception as e:
         print(f"Scraping error: {e}")
-        raise e
+        raise
 
-    # close browser
-    driver.quit()
+    finally:
+        # close browser
+        driver.quit()
 
+    print()
     # print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
     print("------------------------------------------------------------------------\n")
@@ -457,109 +460,107 @@ def supply_store_product_price_parser(price_string: str) -> int | None:
 
 
 def supply_store_product_list(page_source, output_info: OutputInfo):
-    soup = BeautifulSoup(page_source, 'html.parser')
-    product_grid_section = soup.find('section', class_='list-section')
+    try:
+        soup = BeautifulSoup(page_source, 'html.parser')
+        product_grid_section = soup.find('section', class_='list-section')
+    except Exception:
+        print("Pattern not found \"<section class='list-section'>\"")
+        raise
 
-    if product_grid_section is not None:
-        product_subtitles = product_grid_section.find_all('form', method="post")
+    product_subtitles = product_grid_section.find_all('form', method="post")
 
-        for subtitle in product_subtitles:
-            # Find the first image URL
-            image1_element = subtitle.find('img', class_='object-contain')
-            try:
-                image1_src = image1_element['src']
-                image2_src = None
-            except (AttributeError, TypeError):
-                print("Image source not found")
-                sys.exit(1)
+    for subtitle in product_subtitles:
+        # Find the first image URL
+        image1_element = subtitle.find('img', class_='object-contain')
+        try:
+            image1_src = image1_element['src']
+            image2_src = None
+        except (AttributeError, TypeError):
+            print("Image source not found")
+            raise
 
-            # Find the brand
-            brand_element = subtitle.find('div', class_='product-itme-brand')
-            try:
-                brand = brand_element.text.strip()
-            except (AttributeError, TypeError):
-                print("Brand not found")
-                sys.exit(1)
+        # Find the brand
+        brand_element = subtitle.find('div', class_='product-itme-brand')
+        try:
+            brand = brand_element.text.strip()
+        except (AttributeError, TypeError):
+            print("Brand not found")
+            raise
 
-            # Find the title
-            title_element = subtitle.find('a', class_='product-item-link')
-            try:
-                title = title_element.text.strip()
-                if brand in title:
-                    title = title.replace(brand, "").strip()
-            except (AttributeError, TypeError):
-                print("Title not found")
-                sys.exit(1)
+        # Find the title
+        title_element = subtitle.find('a', class_='product-item-link')
+        try:
+            title = title_element.text.strip()
+            if brand in title:
+                title = title.replace(brand, "").strip()
+        except (AttributeError, TypeError):
+            print("Title not found")
+            raise
 
-            # Find the sale price
-            sale_price_element = subtitle.find('span', class_='price-label', string='As low as')
-            try:
-                sale_price = sale_price_element.find_next('span', class_='price').text.strip()
-            except (AttributeError, TypeError):
-                print("Sale Price not found")
-                sys.exit(1)
+        # Find the sale price
+        sale_price_element = subtitle.find('span', class_='price-label', string='As low as')
+        try:
+            sale_price = sale_price_element.find_next('span', class_='price').text.strip()
+        except (AttributeError, TypeError):
+            print("Sale Price not found")
+            raise
 
-            # Find the regular price
-            original_price_element = subtitle.find('span', class_='price-label', string='Regular Price')
-            try:
-                original_price = original_price_element.find_next('span', class_='price').text.strip()
-            except (AttributeError, TypeError):
-                original_price = sale_price
-                # print("Regular Price not found")
+        # Find the regular price
+        original_price_element = subtitle.find('span', class_='price-label', string='Regular Price')
+        try:
+            original_price = original_price_element.find_next('span', class_='price').text.strip()
+        except (AttributeError, TypeError):
+            original_price = sale_price
+            # print("Regular Price not found")
 
-            margin = 1.03
-            aud_twd = get_aud_exchange_rate() * margin
+        margin = 1.03
+        aud_twd = get_aud_exchange_rate() * margin
 
-            # Parse price string to int
-            original_price = round(supply_store_product_price_parser(original_price) * aud_twd)
-            sale_price = round(supply_store_product_price_parser(sale_price) * aud_twd)
+        # Parse price string to int
+        original_price = round(supply_store_product_price_parser(original_price) * aud_twd)
+        sale_price = round(supply_store_product_price_parser(sale_price) * aud_twd)
 
-            shipping_fee = 850
-            tw_import_duty_rate = 1.16
-            cost = round((sale_price + shipping_fee) * tw_import_duty_rate)
+        shipping_fee = 850
+        tw_import_duty_rate = 1.16
+        cost = round((sale_price + shipping_fee) * tw_import_duty_rate)
 
-            # Profit
-            if cost < 10000:
-                if cost < 4000:
-                    selling_price = cost + 300
-                elif cost < 6000:
-                    selling_price = cost + 400
-                elif cost < 8000:
-                    selling_price = cost + 500
-                else:
-                    selling_price = cost + 600
+        # Profit
+        if cost < 10000:
+            if cost < 4000:
+                selling_price = cost + 300
+            elif cost < 6000:
+                selling_price = cost + 400
+            elif cost < 8000:
+                selling_price = cost + 500
             else:
-                selling_price = cost * 1.063  # 6.3% profit
+                selling_price = cost + 600
+        else:
+            selling_price = cost * 1.063  # 6.3% profit
 
-            # Round the price to the nearest even ten
-            selling_price = round(selling_price / 20) * 20
+        # Round the price to the nearest even ten
+        selling_price = round(selling_price / 20) * 20
 
-            if selling_price > original_price:
-                continue
+        if selling_price > original_price:
+            continue
 
-            # Product image parsing and post-processing
+        # Product image parsing and post-processing
 
-            output_info.product_count += 1
-            output_info.product_info = ProductInfo(output_info.product_count, brand, title,
-                                                   original_price, sale_price, cost, selling_price,
-                                                   image1_src, image2_src)
-            output_info.product_info.display_info()
+        output_info.product_count += 1
+        output_info.product_info = ProductInfo(output_info.product_count, brand, title,
+                                               original_price, sale_price, cost, selling_price,
+                                               image1_src, image2_src)
+        output_info.product_info.display_info()
 
-            try:
-                # Download product image
-                download_product_img(output_info)
-
-                # Image post-processing
-                image_post_processing(output_info)
-
-                # Product information logging
-                product_info_logging(output_info)
-
-            except Exception as e:
-                print(f"Image processing failed, error occurred: {e}")
-    else:
-        print("Pattern not found \"<section class='product-grid'>\"")
-        sys.exit(1)
+        try:
+            # Download product image
+            download_product_img(output_info)
+            # Image post-processing
+            image_post_processing(output_info)
+            # Product information logging
+            product_info_logging(output_info)
+        except Exception as e:
+            print(f"Image processing failed, error occurred: {e}")
+            raise
 
 
 def supply_store_web_scraper(url: str) -> None | bool:
@@ -598,56 +599,57 @@ def supply_store_web_scraper(url: str) -> None | bool:
     # Create an instance of Chrome browser
     driver = webdriver.Chrome(options=chrome_options)
 
-    driver.get(url)
-    # The buffering time for the website to fully load.
-    sleep(2)
-    page_source = driver.page_source
+    try:
+        # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
+        driver.implicitly_wait(5)
 
-    # # Write the page source to a file
-    # with open("page_source.html", "w", encoding="utf-8") as file:
-    #    file.write(page_source)
-    # sys.exit(0)
-
-    total_pages = max_pages = 1
-
-    while True:
-        # Parsing HTML using BeautifulSoup
-        soup = BeautifulSoup(page_source, 'html.parser')
-
-        # Find all <span> elements containing page numbers
-        span_elements = soup.find_all('span', class_='sr-only label')
-
-        # Iterate through all <span> elements, extract page numbers, and add them to the page list
-        for span_element in span_elements:
-            try:
-                # Check if the <span> tag represents a page,
-                # then get the text of the next <span> tag, which is the page number
-                if span_element.text.strip() == 'Page':
-                    page_number = int(span_element.find_next('span').text)
-                    max_pages = max(max_pages, page_number)
-
-                elif span_element.text.strip() == "You're currently reading page":
-                    page_number = int(span_element.find_next('span', class_="line-through").text)
-                    max_pages = max(max_pages, page_number)
-
-            except ValueError:
-                pass
-
-        if max_pages == total_pages:
-            break
-
-        total_pages = max(total_pages, max_pages)
-
-        new_url = url + f"?p={max_pages}"
-        driver.get(new_url)
-        sleep(2)
+        driver.get(url)
+        WebDriverWait(driver, 3).until(
+            ec.presence_of_element_located((By.CSS_SELECTOR, 'span.sr-only.label')))
         page_source = driver.page_source
 
-    driver.get(url)
-    sleep(2)
-    page_source = driver.page_source
+        # # Write the page source to a file
+        # with open("page_source.html", "w", encoding="utf-8") as file:
+        #    file.write(page_source)
+        # sys.exit(0)
 
-    try:
+        total_pages = max_pages = 1
+
+        while True:
+            # Parsing HTML using BeautifulSoup
+            soup = BeautifulSoup(page_source, 'html.parser')
+
+            # Find all <span> elements containing page numbers
+            span_elements = soup.find_all('span', class_='sr-only label')
+
+            # Iterate through all <span> elements, extract page numbers, and add them to the page list
+            for span_element in span_elements:
+                try:
+                    # Check if the <span> tag represents a page,
+                    # then get the text of the next <span> tag, which is the page number
+                    if span_element.text.strip() == 'Page':
+                        page_number = int(span_element.find_next('span').text)
+                        max_pages = max(max_pages, page_number)
+
+                    elif span_element.text.strip() == "You're currently reading page":
+                        page_number = int(span_element.find_next('span', class_="line-through").text)
+                        max_pages = max(max_pages, page_number)
+
+                except ValueError:
+                    pass
+
+            if max_pages == total_pages:
+                break
+
+            total_pages = max(total_pages, max_pages)
+
+            new_url = url + f"?p={max_pages}"
+            driver.get(new_url)
+            page_source = driver.page_source
+
+        driver.get(url)
+        page_source = driver.page_source
+
         supply_store_product_list(page_source, output_info)
 
         if total_pages >= 2:
@@ -655,18 +657,18 @@ def supply_store_web_scraper(url: str) -> None | bool:
                 new_url = url + f"?p={page}"
                 # print(new_url)
                 driver.get(new_url)
-                # The buffering time for the website to fully load.
-                sleep(2)
                 page_source = driver.page_source
                 supply_store_product_list(page_source, output_info)
 
     except Exception as e:
         print(f"Scraping error: {e}")
-        raise e
+        raise
 
-    # close browser
-    driver.quit()
+    finally:
+        # close browser
+        driver.quit()
 
+    print()
     # print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
     print("------------------------------------------------------------------------\n")

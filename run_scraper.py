@@ -269,6 +269,12 @@ def image_post_processing(output_info: OutputInfo):
     print("Image post-processing completed")
 
 
+def abort_scraping_msg(url: str) -> str:
+    msg = f"\nAbort scraping: {url}\n"
+    msg += "------------------------------------------------------------------------\n"
+    return msg
+
+
 def upthere_store_product_price_parser(price_string: str) -> int:
     if price_string is not None:
         return int(price_string.split(".")[0].replace(",", "").replace("$", ""))
@@ -402,10 +408,10 @@ def upthere_store_wait_for_page_load(driver, timeout=5):
             print("Timeout: 'product-grid' not found before the timeout.")
             raise
 
-        except NoSuchElementException as e:
+        except NoSuchElementException:
             elapsed_time = time.time() - s_time
             if elapsed_time >= timeout:
-                print(f"'product__subtitle' not found under 'product-grid', timeout:\n{e}")
+                print(f"'product__subtitle' not found under 'product-grid', timeout")
                 raise
             # print(f"'product__subtitle' not found under 'product-grid', retry...")
             time.sleep(0.3)
@@ -415,7 +421,7 @@ def upthere_store_wait_for_page_load(driver, timeout=5):
             raise
 
 
-def upthere_store_start_scraping(driver, url, output_info, total_pages):
+def upthere_store_start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
     upthere_store_product_list(driver.page_source, output_info)
 
     for page in range(2, total_pages + 1):
@@ -496,7 +502,11 @@ def upthere_store_web_scraper(url: str) -> None | bool:
             # with open("page_source.html", "w", encoding="utf-8") as file:
             #     file.write(driver.page_source)
             break
-
+        except (TimeoutException, NoSuchElementException):
+            print("Element waiting timeout error")
+            driver.quit()
+            print(abort_scraping_msg(url))
+            return False
         except StaleElementReferenceException:
             reload += 1
             print(f"Page elements are no longer valid, webpage reloading({reload})...")
@@ -504,14 +514,16 @@ def upthere_store_web_scraper(url: str) -> None | bool:
         except Exception as e:
             print(f"Unknown error: {e}")
             driver.quit()
-            raise
+            print(abort_scraping_msg(url))
+            return False
 
     try:
         upthere_store_start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
         print(f"Scraping error: {e}")
-        raise
+        print(abort_scraping_msg(url))
+        return False
     finally:
         # close browser
         driver.quit()
@@ -735,7 +747,8 @@ def supply_store_web_scraper(url: str) -> None | bool:
 
     except Exception as e:
         print(f"Scraping error: {e}")
-        raise
+        print(abort_scraping_msg(url))
+        return False
     finally:
         # close browser
         driver.quit()
@@ -750,22 +763,46 @@ def upthere_store() -> None:
     urls = [
         "https://uptherestore.com/collections/sale/Needles",
         "https://uptherestore.com/collections/sale/beams-plus",
+        "https://uptherestore.com/collections/sale/orSlow",
         "https://uptherestore.com/collections/sale/Norse-Projects",
+        "https://uptherestore.com/collections/sale/Norse-Projects-Arktisk",
         "https://uptherestore.com/collections/sale/Engineered-Garments",
+        "https://uptherestore.com/collections/sale/Margaret-Howell",
         "https://uptherestore.com/collections/sale/MHL.",
         "https://uptherestore.com/collections/sale/Nike",
         "https://uptherestore.com/collections/sale/Nike-ACG",
+        "https://uptherestore.com/collections/sale/Adidas",
+        "https://uptherestore.com/collections/sale/Jordan",
+        "https://uptherestore.com/collections/sale/Hoka",
+        "https://uptherestore.com/collections/sale/Birkenstock",
+        "https://uptherestore.com/collections/sale/Asics",
+        "https://uptherestore.com/collections/sale/Reebok",
+        "https://uptherestore.com/collections/sale/Salomon",
+        "https://uptherestore.com/collections/sale/New-Balance",
+        "https://uptherestore.com/collections/sale/Malibu",
+        "https://uptherestore.com/collections/sale/Viberg",
+        "https://uptherestore.com/collections/sale/Lusso-Cloud",
         "https://uptherestore.com/collections/sale/Nanamica",
         "https://uptherestore.com/collections/sale/Gramicci",
         "https://uptherestore.com/collections/sale/4SDesigns",
         "https://uptherestore.com/collections/sale/Medicom-Toy",
-        "https://uptherestore.com/collections/sale/Asics",
-        "https://uptherestore.com/collections/sale/Reebok",
-        # "https://uptherestore.com/collections/sale/Salomon",  # Bug
-        "https://uptherestore.com/collections/sale/New-Balance",
+        "https://uptherestore.com/collections/sale/Lite-Year",
+        "https://uptherestore.com/collections/sale/Kapital",
+        "https://uptherestore.com/collections/sale/Objects-IV-Life",
+        "https://uptherestore.com/collections/sale/Satta",
+        "https://uptherestore.com/collections/sale/Adsum",
+        "https://uptherestore.com/collections/sale/Arcteryx",
+        "https://uptherestore.com/collections/sale/Arcteryx-Veilance",
+
+        # Eyewear
+        "https://uptherestore.com/collections/sale/Monokel-Eyewear",
+        "https://uptherestore.com/collections/sale/Sub-Sun",
+        "https://uptherestore.com/collections/sale/AHLEM",
 
         # Accessories
         "https://uptherestore.com/collections/sale/Maple",
+        "https://uptherestore.com/collections/sale/Mikia",
+        "https://uptherestore.com/collections/sale/Tom-Wood",
         "https://uptherestore.com/collections/sale/bleue-burnham"
     ]
 

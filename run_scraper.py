@@ -9,6 +9,7 @@ from typing import Callable
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
@@ -21,6 +22,10 @@ import image_editor
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 class InvalidInputError(Exception):
+    pass
+
+
+class ElementNotFound(Exception):
     pass
 
 
@@ -155,7 +160,7 @@ def download_product_img(output_info: OutputInfo):
         raise e
 
     except Exception as e:
-        print(f"Unknown error occurred: {e}")
+        print(f"Unknown error: {e}")
         raise e
 
 
@@ -271,14 +276,17 @@ def upthere_store_product_price_parser(price_string: str) -> int:
 
 
 def upthere_store_product_list(page_source, output_info: OutputInfo):
-    try:
-        soup = BeautifulSoup(page_source, 'html.parser')
-        product_grid_section = soup.find('section', class_='product-grid')
-    except Exception:
-        print("Pattern not found \"<section class='product-grid'>\"")
-        raise
+    soup = BeautifulSoup(page_source, 'html.parser')
+    product_grid_section = soup.find('section', class_='product-grid')
+    if not product_grid_section:
+        raise ElementNotFound("Pattern not found \"<section class='product-grid'>\"")
 
     product_subtitles = product_grid_section.find_all('div', class_='product__subtitle')
+    if not product_subtitles:
+        with open("fail_page_source.html", "w", encoding="utf-8") as file:
+            file.write(page_source)
+        raise ElementNotFound("Pattern not found \"<div class='product__subtitle'>\"")
+
     for subtitle in product_subtitles:
         if 'Sale' in subtitle.text:
             # print("subtitle:" + subtitle.text)
@@ -355,8 +363,66 @@ def upthere_store_product_list(page_source, output_info: OutputInfo):
                 # Product information logging
                 product_info_logging(output_info)
             except Exception as e:
-                print(f"Image processing failed, error occurred: {e}")
+                print(f"Image processing failed: {e}")
                 raise
+
+
+def upthere_store_wait_for_page_load(driver, timeout=5):
+    # wait for the website to fully load
+    try:
+        WebDriverWait(driver, timeout).until(
+            ec.presence_of_element_located((
+                By.XPATH,
+                "//a[contains(@class, 'product-launch') \
+                    and contains(@class, 'product') \
+                    and contains(@class, 'product__swap') \
+                    and contains(@class, 'complete') \
+                    and not(contains(@class, 'live'))]")))
+
+        WebDriverWait(driver, timeout).until(
+            ec.presence_of_element_located((
+                By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")))
+
+    except TimeoutException:
+        print("Element waiting timed out, unable to locate the element.")
+        raise
+
+    s_time = time.time()
+    while True:
+        try:
+            # Wait for the "product-grid" element to appear
+            product_grid = WebDriverWait(driver, timeout).until(
+                ec.presence_of_element_located((By.CLASS_NAME, "product-grid")))
+
+            # Find the "product__subtitle" element under the "product-grid" element
+            product_grid.find_element(By.CLASS_NAME, "product__subtitle")
+            break  # found it
+
+        except TimeoutException:
+            print("Timeout: 'product-grid' not found before the timeout.")
+            raise
+
+        except NoSuchElementException as e:
+            elapsed_time = time.time() - s_time
+            if elapsed_time >= timeout:
+                print(f"'product__subtitle' not found under 'product-grid', timeout:\n{e}")
+                raise
+            # print(f"'product__subtitle' not found under 'product-grid', retry...")
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"Unknown error: {e}")
+            raise
+
+
+def upthere_store_start_scraping(driver, url, output_info, total_pages):
+    upthere_store_product_list(driver.page_source, output_info)
+
+    for page in range(2, total_pages + 1):
+        new_url = url + f"?page={page}"
+        driver.get(new_url)
+        upthere_store_wait_for_page_load(driver)
+        upthere_store_product_list(driver.page_source, output_info)
 
 
 def upthere_store_web_scraper(url: str) -> None | bool:
@@ -394,62 +460,66 @@ def upthere_store_web_scraper(url: str) -> None | bool:
 
     # Create an instance of Chrome browser
     driver = webdriver.Chrome(options=chrome_options)
+    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
+    # driver.implicitly_wait(5)
+
+    reload = 0
+    while True:
+        try:
+            if reload == 0:
+                driver.get(url)
+            else:
+                driver.refresh()
+            upthere_store_wait_for_page_load(driver)
+
+            # Find the pagination section on the webpage
+            pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
+            page_elements = pagination_element.find_elements(By.TAG_NAME, "li")
+
+            if len(page_elements) == 0:
+                # Only one page
+                total_pages = 1
+            elif len(page_elements) >= 2:
+                # Exclude the first and last navigation elements
+                page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
+
+                # Get the total number of pages
+                total_pages = max([int(num) for num in page_numbers])
+
+            else:
+                print(f"Unexpected page_elements len, save HTML as error_page_source.html")
+                with open("error_page_source.html", "w", encoding="utf-8") as file:
+                    file.write(driver.page_source)
+                raise StaleElementReferenceException
+
+            # Write the page source to a file
+            # with open("page_source.html", "w", encoding="utf-8") as file:
+            #     file.write(driver.page_source)
+            break
+
+        except StaleElementReferenceException:
+            reload += 1
+            print(f"Page elements are no longer valid, webpage reloading({reload})...")
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"Unknown error: {e}")
+            driver.quit()
+            raise
 
     try:
-        # Wait for up to 3 seconds for the element to appear, throw an exception if not found.
-        driver.implicitly_wait(3)
-
-        driver.get(url)
-        WebDriverWait(driver, 3).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR, '.boost-pfs-filter-bottom-pagination')))
-        page_source = driver.page_source
-
-        # Find the pagination section on the webpage
-        pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
-        page_elements = pagination_element.find_elements(By.TAG_NAME, "li")
-
-        if len(page_elements) == 0:
-            # Only one page
-            total_pages = 1
-        else:
-            # Exclude the first and last navigation elements
-            page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
-
-            # Check if the last page is included in the pagination
-            last_page_element = page_elements[-2]
-            last_page_number = last_page_element.text.strip()
-
-            if last_page_number.isdigit():
-                page_numbers.append(last_page_number)
-
-            # Get the total number of pages
-            total_pages = max([int(num) for num in page_numbers])
-
-        # Write the page source to a file
-        # with open("page_source.html", "w", encoding="utf-8") as file:
-        #    file.write(page_source)
-
-        upthere_store_product_list(page_source, output_info)
-
-        if total_pages >= 2:
-            for page in range(2, total_pages + 1):
-                new_url = url + f"?page={page}"
-                # print(new_url)
-                driver.get(new_url)
-                page_source = driver.page_source
-                upthere_store_product_list(page_source, output_info)
+        upthere_store_start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
         print(f"Scraping error: {e}")
         raise
-
     finally:
         # close browser
         driver.quit()
 
     print()
-    # print(f"Total pages: {total_pages}")
+    print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
+    print(f"Total reload time: {reload}")
     print("------------------------------------------------------------------------\n")
 
 
@@ -559,8 +629,32 @@ def supply_store_product_list(page_source, output_info: OutputInfo):
             # Product information logging
             product_info_logging(output_info)
         except Exception as e:
-            print(f"Image processing failed, error occurred: {e}")
+            print(f"Image processing failed: {e}")
             raise
+
+
+def supply_store_wait_for_page_load(driver, timeout=5):
+    # wait for the website to fully load
+    try:
+        WebDriverWait(driver, timeout).until(
+            ec.presence_of_element_located((By.CSS_SELECTOR, 'span.sr-only.label')))
+
+    except TimeoutException:
+        print("Element waiting timed out, unable to locate the element.")
+        raise
+
+
+def supply_store_start_scraping(driver, url, output_info, total_pages):
+    driver.get(url)
+    supply_store_wait_for_page_load(driver)
+    supply_store_product_list(driver.page_source, output_info)
+
+    for page in range(2, total_pages + 1):
+        new_url = url + f"?p={page}"
+        # print(new_url)
+        driver.get(new_url)
+        supply_store_wait_for_page_load(driver)
+        supply_store_product_list(driver.page_source, output_info)
 
 
 def supply_store_web_scraper(url: str) -> None | bool:
@@ -598,26 +692,18 @@ def supply_store_web_scraper(url: str) -> None | bool:
 
     # Create an instance of Chrome browser
     driver = webdriver.Chrome(options=chrome_options)
+    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
+    # driver.implicitly_wait(5)
 
     try:
-        # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
-        driver.implicitly_wait(5)
-
         driver.get(url)
-        WebDriverWait(driver, 3).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR, 'span.sr-only.label')))
-        page_source = driver.page_source
-
-        # # Write the page source to a file
-        # with open("page_source.html", "w", encoding="utf-8") as file:
-        #    file.write(page_source)
-        # sys.exit(0)
+        supply_store_wait_for_page_load(driver, 5)
 
         total_pages = max_pages = 1
 
         while True:
             # Parsing HTML using BeautifulSoup
-            soup = BeautifulSoup(page_source, 'html.parser')
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
 
             # Find all <span> elements containing page numbers
             span_elements = soup.find_all('span', class_='sr-only label')
@@ -642,34 +728,20 @@ def supply_store_web_scraper(url: str) -> None | bool:
                 break
 
             total_pages = max(total_pages, max_pages)
-
             new_url = url + f"?p={max_pages}"
             driver.get(new_url)
-            page_source = driver.page_source
 
-        driver.get(url)
-        page_source = driver.page_source
-
-        supply_store_product_list(page_source, output_info)
-
-        if total_pages >= 2:
-            for page in range(2, total_pages + 1):
-                new_url = url + f"?p={page}"
-                # print(new_url)
-                driver.get(new_url)
-                page_source = driver.page_source
-                supply_store_product_list(page_source, output_info)
+        supply_store_start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
         print(f"Scraping error: {e}")
         raise
-
     finally:
         # close browser
         driver.quit()
 
     print()
-    # print(f"Total pages: {total_pages}")
+    print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
     print("------------------------------------------------------------------------\n")
 

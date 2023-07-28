@@ -148,9 +148,36 @@ def example() -> None:
         # output_file_path = "./image_sample/lightning_mod.jpg"
         add_text_to_image(input_file_path, output_file_path, insert_text, size, position)
 
-    except ImageProcessingError as e:
+    except (Exception, ImageProcessingError) as e:
+        print(f"Error occurred during image processing: {e}")
+
+
+def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
+    try:
+        # Get the size of the original image
+        width, height = get_image_size(image_path)
+
+        # Resize image for IG Stories (9:16).
+        new_height = int(width * (16 / 9))
+
+        image_width_to_text_ratio = 29
+        text_size = round(width / image_width_to_text_ratio)
+
+        image_width_to_text_position_x_ratio = 30.53
+        image_height_to_text_position_y_ratio = 7.3
+        text_position = (round(width / image_width_to_text_position_x_ratio),
+                         round(new_height / image_height_to_text_position_y_ratio))
+
+        output_file_path = append_text_to_filename(image_path, "_ig_story")
+
+        expand_and_center_image(image_path, output_file_path, (width, new_height))
+
+        add_text_to_image(output_file_path, output_file_path, insert_text, text_size, text_position)
+
+    except (Exception, ImageProcessingError) as e:
         print(f"Error occurred during image processing: {e}")
 
 
 if __name__ == '__main__':
     example()
+    create_ig_story_image("./image_sample/lightning.jpg", "Lightning")

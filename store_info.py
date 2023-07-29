@@ -41,16 +41,19 @@ class ProductInfo:
 
 
 class OutputInfo:
-    def __init__(self, store_name: str, group, output_path, product_info):
+    def __init__(self, store_name: str, group: str, output_path: str,
+                 background_color: tuple, product_info):
         self.store_name = store_name
         self.group = group
         self.output_path = output_path
         self.product_count = 0
+        self.image_background_color = background_color
         self.product_info = product_info
 
     def display_info(self):
         print("Store name:", self.store_name)
         print("Output group:", self.group)
         print("Output path:", self.output_path)
+        print("Image background color:", self.image_background_color)
         if self.product_info:
             self.product_info.display_info()

@@ -148,28 +148,10 @@ def image_post_processing(output_info: OutputInfo):
     text_position = (round(width / image_width_to_text_position_x_ratio),
                      round(new_height / image_height_to_text_position_y_ratio))
 
-    # if store_name_dict[output_info.store_name] == output_info.store_name:
-    if output_info.store_name == "upthere":
-        # To match the background color of upthere store product image
-        background_color = (238, 240, 242)
-        # Set the text position above the product image with a specified offset.
-        # text_position = (38, 280)
-        # text_size = 40
-
-    elif output_info.store_name == "supply":
-        background_color = (255, 255, 255)  # default is white
-
-    else:
-        print(f"Image post-processing error: invalid store name")
-        raise InvalidInputError("invalid store name")
-    # else:
-    #     print(f"Image post-processing error: invalid store name")
-    #     raise InvalidInputError("invalid store name")
-
     try:
         # Expand the image
         image_editor.expand_and_center_image(input_file_path, output_file_path, (width, new_height),
-                                             background_color)
+                                             output_info.image_background_color)
     except Exception as e:
         print(f"Image post-processing [Expand the image] error: {e}")
         raise

@@ -198,7 +198,8 @@ def upthere_store_web_scraper(url: str) -> None | bool:
     os.makedirs(folder_path)
     os.makedirs(os.path.join(folder_path, "mod"))
 
-    output_info = OutputInfo("upthere", section, folder_path, None)
+    product_image_bg_color = (238, 240, 242)  # the background color of upthere store product image
+    output_info = OutputInfo("upthere", section, folder_path, product_image_bg_color, None)
     output_info.display_info()
 
     # Set Chrome browser options

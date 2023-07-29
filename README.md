@@ -2,7 +2,7 @@
 #### Install Dependencies
 ##### python packages
 ```bash
-pip3 install requests beautifulsoup4 selenium
+pip3 install requests beautifulsoup4 selenium webdriver-manager
 ```
 
 ##### Chrome on Ububtu-22.04

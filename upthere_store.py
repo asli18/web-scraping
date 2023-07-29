@@ -5,7 +5,6 @@ import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -202,15 +201,7 @@ def upthere_store_web_scraper(url: str) -> None | bool:
     output_info = OutputInfo("upthere", section, folder_path, product_image_bg_color, None)
     output_info.display_info()
 
-    # Set Chrome browser options
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
-    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
-
-    # Create an instance of Chrome browser
-    driver = webdriver.Chrome(options=chrome_options)
-    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
-    # driver.implicitly_wait(5)
+    driver = common.chrome_driver()
 
     reload = 0
     while True:

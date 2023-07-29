@@ -1,11 +1,17 @@
 import logging
 import os
 from datetime import timedelta
-from bs4 import BeautifulSoup
+
 import requests
-from store_info import OutputInfo
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+
 import image_editor
 from exceptions import InvalidInputError
+from store_info import OutputInfo
 
 
 # Helper function to convert seconds to days, hours, minutes, and seconds
@@ -36,6 +42,21 @@ def get_aud_exchange_rate() -> float:
     except requests.exceptions.RequestException as req:
         print("Error occurred while fetching exchange rate:", req)
         raise req
+
+
+def chrome_driver() -> webdriver:
+    # Set Chrome browser options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
+
+    # Create an instance of Chrome browser
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
+                              options=chrome_options)
+    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
+    # driver.implicitly_wait(5)
+
+    return driver
 
 
 # Helper function to check the validity of a URL

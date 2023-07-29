@@ -4,7 +4,6 @@ import shutil
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -135,7 +134,7 @@ def supply_store_wait_for_page_load(driver, timeout=5):
         raise
 
 
-def supply_store_start_scraping(driver, url, output_info, total_pages):
+def supply_store_start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
     driver.get(url)
     supply_store_wait_for_page_load(driver)
     supply_store_product_list(driver.page_source, output_info)
@@ -177,15 +176,7 @@ def supply_store_web_scraper(url: str) -> None | bool:
     output_info = OutputInfo("supply", section, folder_path, product_image_bg_color, None)
     output_info.display_info()
 
-    # Set Chrome browser options
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
-    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
-
-    # Create an instance of Chrome browser
-    driver = webdriver.Chrome(options=chrome_options)
-    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
-    # driver.implicitly_wait(5)
+    driver = common.chrome_driver()
 
     try:
         driver.get(url)

@@ -90,8 +90,8 @@ def main() -> None:
 
 if __name__ == '__main__':
     store_name_dict = {}
-    upthere = StoreWebScraper(store_name_dict, "upthere", upthere_store.upthere_store_web_scraper)
-    supply = StoreWebScraper(store_name_dict, "supply", supply_store.supply_store_web_scraper)
+    upthere = StoreWebScraper(store_name_dict, "upthere", upthere_store.web_scraper)
+    supply = StoreWebScraper(store_name_dict, "supply", supply_store.web_scraper)
 
     start_time = time.perf_counter()
 

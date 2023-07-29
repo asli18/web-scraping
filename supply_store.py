@@ -12,13 +12,13 @@ import common
 from store_info import OutputInfo, ProductInfo
 
 
-def supply_store_product_price_parser(price_string: str) -> int | None:
+def product_price_parser(price_string: str) -> int | None:
     if price_string is not None:
         return round(float(price_string.replace(',', '').replace('$', '')))
     return None
 
 
-def supply_store_product_list(page_source, output_info: OutputInfo):
+def product_info_processor(page_source, output_info: OutputInfo):
     try:
         soup = BeautifulSoup(page_source, 'html.parser')
         product_grid_section = soup.find('section', class_='list-section')
@@ -76,8 +76,8 @@ def supply_store_product_list(page_source, output_info: OutputInfo):
         aud_twd = common.get_aud_exchange_rate() * margin
 
         # Parse price string to int
-        original_price = round(supply_store_product_price_parser(original_price) * aud_twd)
-        sale_price = round(supply_store_product_price_parser(sale_price) * aud_twd)
+        original_price = round(product_price_parser(original_price) * aud_twd)
+        sale_price = round(product_price_parser(sale_price) * aud_twd)
 
         shipping_fee = 850
         tw_import_duty_rate = 1.16
@@ -123,7 +123,7 @@ def supply_store_product_list(page_source, output_info: OutputInfo):
             raise
 
 
-def supply_store_wait_for_page_load(driver, timeout=5):
+def wait_for_page_load(driver: webdriver, timeout=5):
     # wait for the website to fully load
     try:
         WebDriverWait(driver, timeout).until(
@@ -134,20 +134,20 @@ def supply_store_wait_for_page_load(driver, timeout=5):
         raise
 
 
-def supply_store_start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
+def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
     driver.get(url)
-    supply_store_wait_for_page_load(driver)
-    supply_store_product_list(driver.page_source, output_info)
+    wait_for_page_load(driver)
+    product_info_processor(driver.page_source, output_info)
 
     for page in range(2, total_pages + 1):
         new_url = url + f"?p={page}"
         # print(new_url)
         driver.get(new_url)
-        supply_store_wait_for_page_load(driver)
-        supply_store_product_list(driver.page_source, output_info)
+        wait_for_page_load(driver)
+        product_info_processor(driver.page_source, output_info)
 
 
-def supply_store_web_scraper(url: str) -> None | bool:
+def web_scraper(url: str) -> None | bool:
     # print("Input URL:", url)
     if common.check_url_validity(url) is False:
         return False
@@ -180,7 +180,7 @@ def supply_store_web_scraper(url: str) -> None | bool:
 
     try:
         driver.get(url)
-        supply_store_wait_for_page_load(driver, 5)
+        wait_for_page_load(driver)
 
         total_pages = max_pages = 1
 
@@ -214,7 +214,7 @@ def supply_store_web_scraper(url: str) -> None | bool:
             new_url = url + f"?p={max_pages}"
             driver.get(new_url)
 
-        supply_store_start_scraping(driver, url, output_info, total_pages)
+        start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
         print(f"Scraping error: {e}")

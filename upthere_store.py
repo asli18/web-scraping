@@ -14,13 +14,13 @@ from exceptions import ElementNotFound
 from store_info import OutputInfo, ProductInfo
 
 
-def upthere_store_product_price_parser(price_string: str) -> int:
+def product_price_parser(price_string: str) -> int | None:
     if price_string is not None:
         return int(price_string.split(".")[0].replace(",", "").replace("$", ""))
-    return 0
+    return None
 
 
-def upthere_store_product_list(page_source, output_info: OutputInfo):
+def product_info_processor(page_source, output_info: OutputInfo):
     soup = BeautifulSoup(page_source, 'html.parser')
     product_grid_section = soup.find('section', class_='product-grid')
     if not product_grid_section:
@@ -42,8 +42,8 @@ def upthere_store_product_list(page_source, output_info: OutputInfo):
             sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
 
             # Parse price string to int
-            original_price = upthere_store_product_price_parser(original_price)
-            sale_price = upthere_store_product_price_parser(sale_price)
+            original_price = product_price_parser(original_price)
+            sale_price = product_price_parser(sale_price)
 
             shipping_fee = 850
             tw_import_duty_rate = 1.16
@@ -113,7 +113,7 @@ def upthere_store_product_list(page_source, output_info: OutputInfo):
                 raise
 
 
-def upthere_store_wait_for_page_load(driver, timeout=5):
+def wait_for_page_load(driver: webdriver, timeout=5):
     # wait for the website to fully load
     try:
         WebDriverWait(driver, timeout).until(
@@ -161,18 +161,17 @@ def upthere_store_wait_for_page_load(driver, timeout=5):
             raise
 
 
-def upthere_store_start_scraping(driver: webdriver, url: str,
-                                 output_info: OutputInfo, total_pages: int):
-    upthere_store_product_list(driver.page_source, output_info)
+def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
+    product_info_processor(driver.page_source, output_info)
 
     for page in range(2, total_pages + 1):
         new_url = url + f"?page={page}"
         driver.get(new_url)
-        upthere_store_wait_for_page_load(driver)
-        upthere_store_product_list(driver.page_source, output_info)
+        wait_for_page_load(driver)
+        product_info_processor(driver.page_source, output_info)
 
 
-def upthere_store_web_scraper(url: str) -> None | bool:
+def web_scraper(url: str) -> None | bool:
     # print("Input URL:", url)
     if common.check_url_validity(url) is False:
         return False
@@ -210,7 +209,7 @@ def upthere_store_web_scraper(url: str) -> None | bool:
                 driver.get(url)
             else:
                 driver.refresh()
-            upthere_store_wait_for_page_load(driver)
+            wait_for_page_load(driver)
 
             # Find the pagination section on the webpage
             pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
@@ -252,7 +251,7 @@ def upthere_store_web_scraper(url: str) -> None | bool:
             return False
 
     try:
-        upthere_store_start_scraping(driver, url, output_info, total_pages)
+        start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
         print(f"Scraping error: {e}")

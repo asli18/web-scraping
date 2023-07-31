@@ -134,18 +134,21 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_p
 
 
 def web_scraper(url: str) -> None | bool:
-    # print("Input URL:", url)
     if common.check_url_validity(url) is False:
         return False
-    if not url.startswith("https://www.supplystore.com.au"):
-        print("URL is valid, but it does not belong to the supply store website.")
+
+    store_name = "supply"
+    store_url_prefix = "https://www.supplystore.com.au"
+
+    if not url.startswith(store_url_prefix):
+        print(f"URL is valid, but it does not belong to the {store_name} store website.")
         return False
 
     print("-------------------------- [ Start scraping ] --------------------------")
     section = url.split("/")[-1]
     print("Section:", section)
 
-    folder_path = os.path.join(".", "output", "supply", section)
+    folder_path = os.path.join(".", "output", store_name, section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):
@@ -159,7 +162,7 @@ def web_scraper(url: str) -> None | bool:
     os.makedirs(os.path.join(folder_path, "mod"))
 
     product_image_bg_color = (255, 255, 255)  # default is white
-    output_info = OutputInfo("supply", section, folder_path, product_image_bg_color, None)
+    output_info = OutputInfo(store_name, section, folder_path, product_image_bg_color, None)
     output_info.display_info()
 
     driver = common.chrome_driver()

@@ -22,95 +22,71 @@ def product_price_parser(price_string: str) -> int | None:
 
 def product_info_processor(page_source, output_info: OutputInfo):
     soup = BeautifulSoup(page_source, 'html.parser')
-    product_grid_section = soup.find('section', class_='product-grid')
-    if not product_grid_section:
-        raise ElementNotFound("Pattern not found \"<section class='product-grid'>\"")
 
-    product_subtitles = product_grid_section.find_all('div', class_='product__subtitle')
-    if not product_subtitles:
-        with open("fail_page_source.html", "w", encoding="utf-8") as file:
-            file.write(page_source)
-        raise ElementNotFound("Pattern not found \"<div class='product__subtitle'>\"")
+    # find <section class="product-grid">
+    # find_all <a class="product" or class="product__swap"
+    product_containers = soup \
+        .find('section', class_='product-grid') \
+        .find_all('a', class_=['product', 'product__swap'])
 
-    for subtitle in product_subtitles:
-        if 'Sale' in subtitle.text:
-            # print("subtitle:" + subtitle.text)
+    if not product_containers:
+        common.download_html(page_source, "fail_page_source.html")
+        raise ElementNotFound("Product pattern not found")
 
-            brand = subtitle.find('span').contents[0].strip().split('\n')[0]
-            title = subtitle.find_next('div', class_='product__title').text.strip()
-            original_price = subtitle.find_next('del', class_='price__amount').text.strip()
-            sale_price = subtitle.find_next('ins', class_='price__amount').text.strip()
+    for idx, container in enumerate(product_containers, start=1):
+        brand = container \
+            .find('div', class_='product__subtitle') \
+            .find('span').contents[0].strip().split('\n')[0]
+        title = container.find('div', class_='product__title').text.strip()
+        original_price = container.find('del', class_='price__amount').text.strip()
+        sale_price = container.find('ins', class_='price__amount').text.strip()
+        # print(f"No.{idx}: {title}")
+        # print(f"brand: {brand}\n"
+        #       f"title: {title}\n"
+        #       f"price: {original_price}\n"
+        #       f"sale:  {sale_price}\n")
 
-            # Parse price string to int
-            original_price = product_price_parser(original_price)
-            sale_price = product_price_parser(sale_price)
+        image_urls = []
+        images = container.find_all('img')
+        for index, img in enumerate(images, start=1):
+            image_url = "https:" + img['src']
+            # print(f"image url {index}: {image_url}")
+            image_urls.append(image_url)
 
-            shipping_fee = 850
-            tw_import_duty_rate = 1.16
-            aus_gst_rate = 0.1  # Goods and Services Tax (GST) in Australia is 10%
-            cost = round(((sale_price / (1 + aus_gst_rate)) + shipping_fee) * tw_import_duty_rate)
+        # Parse price string to int
+        original_price = product_price_parser(original_price)
+        sale_price = product_price_parser(sale_price)
 
-            # Profit
-            if cost < 10000:
-                if cost < 4000:
-                    selling_price = cost + 300
-                elif cost < 6000:
-                    selling_price = cost + 400
-                elif cost < 8000:
-                    selling_price = cost + 500
-                else:
-                    selling_price = cost + 600
-            else:
-                selling_price = cost * 1.063  # 6.3% profit
+        shipping_fee = 850
+        tw_import_duty_rate = 1.16
+        aus_gst_rate = 0.1  # Goods and Services Tax (GST) in Australia is 10%
+        cost = round(((sale_price / (1 + aus_gst_rate)) + shipping_fee) * tw_import_duty_rate)
 
-            # Round the price to the nearest even ten
-            selling_price = round(selling_price / 20) * 20
+        selling_price = common.calculate_profitable_price(cost)
 
-            if selling_price > original_price:
-                continue
+        if selling_price > original_price:
+            continue  # not profitable
 
-            # Product image parsing and post-processing
+        # Product image parsing and post-processing
 
-            # Find the second image URL
-            image2_element = subtitle.find_previous('figure', class_='product__image')
-            try:
-                image2_src = image2_element.find('img')['src']
-                image2_src = "https:" + image2_src
-            except (AttributeError, TypeError):
-                # Second figure might be a video
-                image2_src = None
+        output_info.product_count += 1
+        output_info.product_info = \
+            ProductInfo(output_info.product_count, brand, title,
+                        original_price, sale_price, cost, selling_price,
+                        image_urls[0] if len(image_urls) >= 1 else None,
+                        image_urls[1] if len(image_urls) >= 2 else None)
+        output_info.product_info.display_info()
 
-            # Find the second image or video URL
-            # image2_element = subtitle.find_previous('figure', class_='product__image').find(
-            #    lambda tag: tag.name in ['img', 'source']) # figure: img, video: source
-            # image2_src = image2_element['src'] if image2_element else None
-
-            # Find the first image or video URL
-            image1_element = subtitle.find_previous('figure', class_='product__image').find_previous('figure')
-            if image1_element:
-                image1_element = image1_element.find(lambda tag: tag.name in ['img', 'source'])
-                image1_src = image1_element.get('src')
-                image1_src = "https:" + image1_src
-            else:
-                image1_src = None
-
-            output_info.product_count += 1
-            output_info.product_info = \
-                ProductInfo(output_info.product_count, brand, title,
-                            original_price, sale_price, cost, selling_price,
-                            image1_src, image2_src)
-            output_info.product_info.display_info()
-
-            try:
-                # Download product image
-                common.download_product_img(output_info)
-                # Image post-processing
-                common.image_post_processing(output_info)
-                # Product information logging
-                common.product_info_logging(output_info)
-            except Exception as e:
-                print(f"Image processing failed: {e}")
-                raise
+        try:
+            # Download product image
+            common.download_product_img(output_info)
+            # Image post-processing
+            common.image_post_processing(output_info)
+            # Product information logging
+            common.product_info_logging(output_info)
+        except Exception as e:
+            print(f"Image processing failed: {e}")
+            raise
 
 
 def wait_for_page_load(driver: webdriver, timeout=5):

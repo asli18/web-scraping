@@ -83,24 +83,10 @@ def product_info_processor(page_source, output_info: OutputInfo):
         tw_import_duty_rate = 1.16
         cost = round((sale_price + shipping_fee) * tw_import_duty_rate)
 
-        # Profit
-        if cost < 10000:
-            if cost < 4000:
-                selling_price = cost + 300
-            elif cost < 6000:
-                selling_price = cost + 400
-            elif cost < 8000:
-                selling_price = cost + 500
-            else:
-                selling_price = cost + 600
-        else:
-            selling_price = cost * 1.063  # 6.3% profit
-
-        # Round the price to the nearest even ten
-        selling_price = round(selling_price / 20) * 20
+        selling_price = common.calculate_profitable_price(cost)
 
         if selling_price > original_price:
-            continue
+            continue  # not profitable
 
         # Product image parsing and post-processing
 

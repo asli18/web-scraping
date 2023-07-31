@@ -44,6 +44,26 @@ def get_aud_exchange_rate() -> float:
         raise req
 
 
+def download_html(page_source, file_path: str = "page_source.html") -> None:
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write(page_source)
+
+
+def calculate_profitable_price(cost) -> int:
+    # Profit
+    if cost < 10000:
+        increment = min(600, (cost // 2000) * 100 + 300)
+        selling_price = cost + increment
+    else:
+        profit_rate = 0.063  # 6.3% profit
+        selling_price = cost * (1 + profit_rate)
+
+    # Round the price to the nearest even ten
+    selling_price = round(selling_price / 20) * 20
+
+    return selling_price
+
+
 def chrome_driver() -> webdriver:
     # Set Chrome browser options
     chrome_options = Options()

@@ -44,9 +44,24 @@ def get_aud_exchange_rate() -> float:
         raise req
 
 
-def download_html(page_source, file_path: str = "page_source.html") -> None:
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write(page_source)
+def get_static_html_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        html_content = response.text
+        return html_content
+    except requests.exceptions.RequestException as e:
+        print("Error:", e)
+        raise
+
+
+def save_html_to_file(html_content, file_path: str):
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(html_content)
+        print(f"HTML content successfully saved to '{file_path}'.")
+    except IOError as e:
+        print("Error saving file:", e)
 
 
 def calculate_profitable_price(cost) -> int:

@@ -127,7 +127,6 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_p
 
     for page in range(2, total_pages + 1):
         new_url = url + f"?p={page}"
-        # print(new_url)
         driver.get(new_url)
         wait_for_page_load(driver)
         product_info_processor(driver.page_source, output_info)

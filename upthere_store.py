@@ -30,7 +30,7 @@ def product_info_processor(page_source, output_info: OutputInfo):
         .find_all('a', class_=['product', 'product__swap'])
 
     if not product_containers:
-        common.download_html(page_source, "fail_page_source.html")
+        common.save_html_to_file(page_source, "fail_page_source.html")
         raise ElementNotFound("Product pattern not found")
 
     for idx, container in enumerate(product_containers, start=1):
@@ -138,6 +138,8 @@ def wait_for_page_load(driver: webdriver, timeout=5):
 
 
 def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
+    driver.get(url)
+    wait_for_page_load(driver)
     product_info_processor(driver.page_source, output_info)
 
     for page in range(2, total_pages + 1):
@@ -180,58 +182,39 @@ def web_scraper(url: str) -> None | bool:
     output_info.display_info()
 
     driver = common.chrome_driver()
-
-    reload = 0
-    while True:
-        try:
-            if reload == 0:
-                driver.get(url)
-            else:
-                driver.refresh()
-            wait_for_page_load(driver)
-
-            # Find the pagination section on the webpage
-            pagination_element = driver.find_element(By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
-            page_elements = pagination_element.find_elements(By.TAG_NAME, "li")
-
-            if len(page_elements) == 0:
-                # Only one page
-                total_pages = 1
-            elif len(page_elements) >= 2:
-                # Exclude the first and last navigation elements
-                page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
-
-                # Get the total number of pages
-                total_pages = max([int(num) for num in page_numbers])
-
-            else:
-                print(f"Unexpected page_elements len, save HTML as error_page_source.html")
-                with open("error_page_source.html", "w", encoding="utf-8") as file:
-                    file.write(driver.page_source)
-                raise StaleElementReferenceException
-
-            # Write the page source to a file
-            # with open("page_source.html", "w", encoding="utf-8") as file:
-            #     file.write(driver.page_source)
-            break
-        except (TimeoutException, NoSuchElementException):
-            print("Element waiting timeout error")
-            driver.quit()
-            print(common.abort_scraping_msg(url))
-            return False
-        except StaleElementReferenceException:
-            reload += 1
-            print(f"Page elements are no longer valid, webpage reloading({reload})...")
-            time.sleep(0.3)
-        except Exception as e:
-            print(f"Unknown error: {e}")
-            driver.quit()
-            print(common.abort_scraping_msg(url))
-            return False
+    html_content = common.get_static_html_content(url)
 
     try:
+        # Find the pagination section on the webpage
+        soup = BeautifulSoup(html_content, 'html.parser')
+        # Find the pagination section on the webpage
+        pagination_element = soup.select_one('.boost-pfs-filter-bottom-pagination')
+        page_elements = pagination_element.select('li')
+
+        if len(page_elements) == 0:
+            # Only one page
+            total_pages = 1
+        elif len(page_elements) >= 2:
+            # Exclude the first and last navigation elements
+            page_numbers = [element.text for element in page_elements[1:-1] if element.text.isdigit()]
+
+            # Get the total number of pages
+            total_pages = max([int(num) for num in page_numbers])
+        else:
+            print(f"Unexpected page_elements len, save HTML as error_page_source.html")
+            common.save_html_to_file(html_content, "error_page_source.html")
+            raise StaleElementReferenceException
+
         start_scraping(driver, url, output_info, total_pages)
 
+    except (TimeoutException, NoSuchElementException):
+        print("Element waiting timeout error")
+        print(common.abort_scraping_msg(url))
+        return False
+    except StaleElementReferenceException:
+        print(f"Page elements are no longer valid")
+        print(common.abort_scraping_msg(url))
+        return False
     except Exception as e:
         print(f"Scraping error: {e}")
         print(common.abort_scraping_msg(url))
@@ -243,5 +226,4 @@ def web_scraper(url: str) -> None | bool:
     print()
     print(f"Total pages: {total_pages}")
     print(f"Total valid products: {output_info.product_count}")
-    print(f"Total reload time: {reload}")
     print("------------------------------------------------------------------------\n")

@@ -1,9 +1,11 @@
 import time
 import timeit
-from store_info import StoreWebScraper
+
+import cettire_store
 import common
-import upthere_store
 import supply_store
+import upthere_store
+from store_info import StoreWebScraper
 
 
 # Press Shift+F10 to execute it or replace it with your code.
@@ -58,7 +60,7 @@ def scrape_upthere_store() -> None:
     ]
 
     for url in urls:
-        upthere.execute_scraper(url)
+        upthere_scraper.execute_scraper(url)
 
     # Error cases, invalid URL
     # upthere.execute_scraper("http://www.invalid-domain.com")
@@ -68,7 +70,53 @@ def scrape_upthere_store() -> None:
 
 
 def scrape_supply_store() -> None:
-    supply.execute_scraper("https://www.supplystore.com.au/sale")
+    supply_scraper.execute_scraper("https://www.supplystore.com.au/sale")
+
+
+def scrape_cettire_store() -> None:
+    category_bag = "Bags"
+    category_accessories = "Accessories"
+
+    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("A.P.C."))
+
+    # Bags
+    brands = [
+        "A.P.C.",
+        "Balenciaga",
+        "Comme des Garçons",
+        "Jil Sander",
+        "Lemaire",
+        "Loewe",
+        "Maison Kitsun",
+        "Maison Margiela",
+        "MM6 Maison Margiela",
+        "Prada",
+    ]
+
+    for brand in brands:
+        cettire_scraper.execute_scraper(
+            cettire_store.gen_store_sale_url(brand, category_bag))
+
+    # Accessories
+    brands = [
+        "A.P.C.",
+        "Alexander McQueen",
+        "Balenciaga",
+        "Comme des Garçons",
+        "Jil Sander",
+        "Lemaire",
+        "Loewe",
+        "Maison Kitsun",
+        "Maison Margiela",
+        "MM6 Maison Margiela",
+        "Prada",
+        "Ray-Ban",
+        "Thom Browne",
+    ]
+
+    for brand in brands:
+        cettire_scraper.execute_scraper(
+            cettire_store.gen_store_sale_url(brand, category_accessories))
 
 
 def main() -> None:
@@ -86,12 +134,14 @@ def main() -> None:
     print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")
     scrape_upthere_store()
     scrape_supply_store()
+    scrape_cettire_store()
 
 
 if __name__ == '__main__':
     store_name_dict = {}
-    upthere = StoreWebScraper(store_name_dict, "upthere", upthere_store.web_scraper)
-    supply = StoreWebScraper(store_name_dict, "supply", supply_store.web_scraper)
+    upthere_scraper = StoreWebScraper(store_name_dict, "upthere", upthere_store.web_scraper)
+    supply_scraper = StoreWebScraper(store_name_dict, "supply", supply_store.web_scraper)
+    cettire_scraper = StoreWebScraper(store_name_dict, "cettire", cettire_store.web_scraper)
 
     start_time = time.perf_counter()
 

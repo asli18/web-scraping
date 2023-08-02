@@ -193,20 +193,36 @@ def image_post_processing(output_info: OutputInfo):
     # Get the size of the original image
     width, height = image_editor.get_image_size(input_file_path)
 
-    # Resize image for IG Stories (9:16).
-    new_height = int(width * (16 / 9))
+    # Calculate the aspect ratio of the original image
+    aspect_ratio = width / height
+
+    # Resize image for IG Stories (9:16) maintaining the original aspect ratio.
+    target_aspect_ratio = 9 / 16
+
+    if aspect_ratio > target_aspect_ratio:
+        # Original image is wider, so we use the width for resizing
+        new_width = width
+        new_height = int(width / target_aspect_ratio)
+    else:
+        # Original image is taller, so we use the height for resizing
+        new_height = height
+        new_width = int(height * target_aspect_ratio)
+
+    if new_width < 800:
+        new_width = 800
+        new_height = int(new_width / target_aspect_ratio)
 
     image_width_to_text_ratio = 29
-    text_size = round(width / image_width_to_text_ratio)
+    text_size = round(new_width / image_width_to_text_ratio)
 
     image_width_to_text_position_x_ratio = 30.53
     image_height_to_text_position_y_ratio = 7.3
-    text_position = (round(width / image_width_to_text_position_x_ratio),
+    text_position = (round(new_width / image_width_to_text_position_x_ratio),
                      round(new_height / image_height_to_text_position_y_ratio))
 
     try:
         # Expand the image
-        image_editor.expand_and_center_image(input_file_path, output_file_path, (width, new_height),
+        image_editor.expand_and_center_image(input_file_path, output_file_path, (new_width, new_height),
                                              output_info.image_background_color)
     except Exception as e:
         print(f"Image post-processing [Expand the image] error: {e}")

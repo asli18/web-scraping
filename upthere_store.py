@@ -182,10 +182,10 @@ def web_scraper(url: str) -> None | bool:
     output_info.display_info()
 
     driver = common.chrome_driver()
-    html_content = common.get_static_html_content(url)
 
     try:
-        # Find the pagination section on the webpage
+        html_content = common.get_static_html_content(url)
+
         soup = BeautifulSoup(html_content, 'html.parser')
         # Find the pagination section on the webpage
         pagination_element = soup.select_one('.boost-pfs-filter-bottom-pagination')

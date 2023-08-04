@@ -13,7 +13,7 @@ class StoreWebScraper:
 class ProductInfo:
     def __init__(self, index: int, brand: str, title: str,
                  original_price: int, sale_price: int, cost: int, selling_price: int,
-                 image1_src, image2_src):
+                 image1_src, image2_src, product_url):
         self.index = str(index).zfill(3)
         self.brand = brand
         self.title = title.replace("/", "-")  # Replace the forward slash with a hyphen.
@@ -23,6 +23,7 @@ class ProductInfo:
         self.selling_price = selling_price if selling_price is not None else 0
         self.image1_src = image1_src if image1_src is not None else ""
         self.image2_src = image2_src if image2_src is not None else ""
+        self.product_url = product_url if product_url is not None else ""
 
         self.image1_filename = f"{self.index}. {self.brand} - {self.title}.jpg"
 
@@ -37,6 +38,7 @@ class ProductInfo:
         print(f"Selling Price:  ${self.selling_price:,}")
         print(f"Photo 1 URL:    {self.image1_src}")
         print(f"Photo 2 URL:    {self.image2_src}")
+        print(f"Product URL:    {self.product_url}")
         print()
 
 

@@ -75,6 +75,9 @@ def product_info_processor(page_source, output_info: OutputInfo):
         raise
 
     for element in product_elements:
+        anchor_element = element.find('a')
+        product_url = "https://www.cettire.com" + anchor_element['href']
+
         # Find the first image URL
         image1_element = element.find('img', class_='_3P4L7mmfV3qp3D432lVyQu')
         try:
@@ -136,7 +139,7 @@ def product_info_processor(page_source, output_info: OutputInfo):
         output_info.product_info = \
             ProductInfo(output_info.product_count, brand, title,
                         original_price, sale_price, cost, selling_price,
-                        image1_src, image2_src)
+                        image1_src, image2_src, product_url)
         output_info.product_info.display_info()
 
         try:

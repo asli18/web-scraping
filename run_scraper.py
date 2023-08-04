@@ -77,17 +77,20 @@ def scrape_cettire_store() -> None:
     category_bag = "Bags"
     category_accessories = "Accessories"
 
-    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("A.P.C."))
+    # All category of products
+    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Common Projects"))
+    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island"))
+    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island Shadow Project"))
 
     # Bags
     brands = [
         "A.P.C.",
         "Balenciaga",
-        "Comme des Garçons",
+        "Comme des Garçons Wallet",
+        "Gucci",
         "Jil Sander",
         "Lemaire",
         "Loewe",
-        "Maison Kitsun",
         "Maison Margiela",
         "MM6 Maison Margiela",
         "Prada",
@@ -100,18 +103,18 @@ def scrape_cettire_store() -> None:
     # Accessories
     brands = [
         "A.P.C.",
-        "Alexander McQueen",
         "Balenciaga",
-        "Comme des Garçons",
+        "Comme des Garçons Wallet",
+        "Gucci",
         "Jil Sander",
         "Lemaire",
         "Loewe",
-        "Maison Kitsun",
         "Maison Margiela",
         "MM6 Maison Margiela",
         "Prada",
-        "Ray-Ban",
+        "Saint Laurent",
         "Thom Browne",
+        "Tom Ford",
     ]
 
     for brand in brands:

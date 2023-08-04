@@ -34,6 +34,8 @@ def product_info_processor(page_source, output_info: OutputInfo):
         raise ElementNotFound("Product pattern not found")
 
     for idx, container in enumerate(product_containers, start=1):
+        product_url = "https://uptherestore.com" + container['href']
+
         brand = container \
             .find('div', class_='product__subtitle') \
             .find('span').contents[0].strip().split('\n')[0]
@@ -74,7 +76,8 @@ def product_info_processor(page_source, output_info: OutputInfo):
             ProductInfo(output_info.product_count, brand, title,
                         original_price, sale_price, cost, selling_price,
                         image_urls[0] if len(image_urls) >= 1 else None,
-                        image_urls[1] if len(image_urls) >= 2 else None)
+                        image_urls[1] if len(image_urls) >= 2 else None,
+                        product_url)
         output_info.product_info.display_info()
 
         try:

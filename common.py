@@ -172,6 +172,7 @@ def product_info_logging(output_info: OutputInfo):
     logger.info(f"Selling Price:  ${_.selling_price:,}")
     logger.info(f"Photo 1 URL:    {_.image1_src}")
     logger.info(f"Photo 2 URL:    {_.image2_src}")
+    logger.info(f"Product URL:    {_.product_url}")
     logger.info("")
 
     # Clean up logger object handler

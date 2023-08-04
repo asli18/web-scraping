@@ -46,12 +46,15 @@ def product_info_processor(page_source, output_info: OutputInfo):
             print("Brand not found")
             raise
 
-        # Find the title
-        title_element = subtitle.find('a', class_='product-item-link')
+        # Find the title and link
+        title_element = subtitle.find('div', class_='product-item-name')
         try:
             title = title_element.text.strip()
             if brand in title:
                 title = title.replace(brand, "").strip()
+
+            anchor_element = title_element.find('a', class_="product-item-link")
+            product_url = anchor_element['href']
         except (AttributeError, TypeError):
             print("Title not found")
             raise
@@ -94,7 +97,7 @@ def product_info_processor(page_source, output_info: OutputInfo):
         output_info.product_info = \
             ProductInfo(output_info.product_count, brand, title,
                         original_price, sale_price, cost, selling_price,
-                        image1_src, image2_src)
+                        image1_src, image2_src, product_url)
         output_info.product_info.display_info()
 
         try:

@@ -1,10 +1,12 @@
 import logging
 import os
+import time
 from datetime import timedelta
 
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -79,19 +81,28 @@ def calculate_profitable_price(cost) -> int:
     return selling_price
 
 
-def chrome_driver() -> webdriver:
-    # Set Chrome browser options
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
-    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
+def chrome_driver(max_retry=3, retry_delay=2) -> webdriver:
+    attempts = 0
+    while attempts < max_retry:
+        try:
+            # Set Chrome browser options
+            chrome_options = Options()
+            chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
+            chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
 
-    # Create an instance of Chrome browser
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                              options=chrome_options)
-    # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
-    # driver.implicitly_wait(5)
+            # Create an instance of Chrome browser
+            driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
+                                      options=chrome_options)
+            # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
+            # driver.implicitly_wait(5)
 
-    return driver
+            return driver
+        except WebDriverException as e:
+            attempts += 1
+            print(f"Error: {e}. Retrying... Attempt {attempts}/{max_retry}")
+            time.sleep(retry_delay)
+
+    raise Exception(f"Failed to create Chrome WebDriver after {max_retry} attempts.")
 
 
 # Helper function to check the validity of a URL

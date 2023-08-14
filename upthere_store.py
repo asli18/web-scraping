@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import urllib.parse
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -12,6 +13,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 import common
 from exceptions import ElementNotFound
 from store_info import OutputInfo, ProductInfo
+
+
+def gen_store_sale_url(brand: str) -> str:
+    if brand:
+        url = "https://uptherestore.com/collections/sale/" + urllib.parse.quote(brand)
+        return url
+    return ""
 
 
 def product_price_parser(price_string: str) -> int | None:

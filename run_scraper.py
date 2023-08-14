@@ -13,54 +13,53 @@ from store_info import StoreWebScraper
 
 
 def scrape_upthere_store() -> None:
-    urls = [
-        "https://uptherestore.com/collections/sale/Needles",
-        "https://uptherestore.com/collections/sale/beams-plus",
-        "https://uptherestore.com/collections/sale/orSlow",
-        "https://uptherestore.com/collections/sale/Norse-Projects",
-        "https://uptherestore.com/collections/sale/Norse-Projects-Arktisk",
-        "https://uptherestore.com/collections/sale/Engineered-Garments",
-        "https://uptherestore.com/collections/sale/Margaret-Howell",
-        "https://uptherestore.com/collections/sale/MHL.",
-        "https://uptherestore.com/collections/sale/Nike",
-        "https://uptherestore.com/collections/sale/Nike-ACG",
-        "https://uptherestore.com/collections/sale/Adidas",
-        "https://uptherestore.com/collections/sale/Jordan",
-        "https://uptherestore.com/collections/sale/Hoka",
-        "https://uptherestore.com/collections/sale/Birkenstock",
-        "https://uptherestore.com/collections/sale/Asics",
-        "https://uptherestore.com/collections/sale/Reebok",
-        "https://uptherestore.com/collections/sale/Salomon",
-        "https://uptherestore.com/collections/sale/New-Balance",
-        "https://uptherestore.com/collections/sale/Malibu",
-        "https://uptherestore.com/collections/sale/Viberg",
-        "https://uptherestore.com/collections/sale/Lusso-Cloud",
-        "https://uptherestore.com/collections/sale/Nanamica",
-        "https://uptherestore.com/collections/sale/Gramicci",
-        "https://uptherestore.com/collections/sale/4SDesigns",
-        "https://uptherestore.com/collections/sale/Medicom-Toy",
-        "https://uptherestore.com/collections/sale/Lite-Year",
-        "https://uptherestore.com/collections/sale/Kapital",
-        "https://uptherestore.com/collections/sale/Objects-IV-Life",
-        "https://uptherestore.com/collections/sale/Satta",
-        "https://uptherestore.com/collections/sale/Adsum",
-        "https://uptherestore.com/collections/sale/Arcteryx",
-        "https://uptherestore.com/collections/sale/Arcteryx-Veilance",
+    brands = [
+        "Needles",
+        "beams-plus",
+        "orSlow",
+        "Norse-Projects",
+        "Norse-Projects-Arktisk",
+        "Engineered-Garments",
+        "Margaret-Howell",
+        "MHL.",
+        "Nike",
+        "Nike-ACG",
+        "Adidas",
+        "Jordan",
+        "Hoka",
+        "Birkenstock",
+        "Asics",
+        "Salomon",
+        "New-Balance",
+        "Malibu",
+        "Viberg",
+        "Lusso-Cloud",
+        "Nanamica",
+        "Gramicci",
+        "4SDesigns",
+        "Medicom-Toy",
+        "Lite-Year",
+        "Kapital",
+        "Objects-IV-Life",
+        "Satta",
+        "Adsum",
+        "Arcteryx",
+        "Arcteryx-Veilance",
 
         # Eyewear
-        "https://uptherestore.com/collections/sale/Monokel-Eyewear",
-        "https://uptherestore.com/collections/sale/Sub-Sun",
-        "https://uptherestore.com/collections/sale/AHLEM",
+        "Monokel-Eyewear",
+        "Sub-Sun",
+        "AHLEM",
 
         # Accessories
-        "https://uptherestore.com/collections/sale/Maple",
-        "https://uptherestore.com/collections/sale/Mikia",
-        "https://uptherestore.com/collections/sale/Tom-Wood",
-        "https://uptherestore.com/collections/sale/bleue-burnham"
+        "Maple",
+        "Mikia",
+        "Tom-Wood",
+        "bleue-burnham"
     ]
 
-    for url in urls:
-        upthere_scraper.execute_scraper(url)
+    for brand in brands:
+        upthere_scraper.execute_scraper(upthere_store.gen_store_sale_url(brand))
 
     # Error cases, invalid URL
     # upthere.execute_scraper("http://www.invalid-domain.com")

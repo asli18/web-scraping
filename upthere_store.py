@@ -98,10 +98,8 @@ def wait_for_page_load(driver: webdriver, timeout=5):
         WebDriverWait(driver, timeout).until(
             ec.presence_of_element_located((
                 By.XPATH,
-                "//a[contains(@class, 'product-launch') \
-                    and contains(@class, 'product') \
-                    and contains(@class, 'product__swap') \
-                    and contains(@class, 'complete') \
+                "//div[contains(@class, 'cell') \
+                    and contains(@class, 'boost-pfs-action-list-enabled') \
                     and not(contains(@class, 'live'))]")))
 
         WebDriverWait(driver, timeout).until(

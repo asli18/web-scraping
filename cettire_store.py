@@ -278,7 +278,8 @@ def web_scraper(url: str) -> None | bool:
         start_scraping(driver, url, output_info, total_pages)
 
     except Exception as e:
-        print(f"Scraping error: {e}")
+        print(f"Unknown scraping error: {e}")
+        common.delete_empty_folders(folder_path)
         print(common.abort_scraping_msg(url))
         return False
     finally:

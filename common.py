@@ -263,3 +263,16 @@ def abort_scraping_msg(url: str) -> str:
     msg = f"\nAbort scraping: {url}\n"
     msg += "------------------------------------------------------------------------\n"
     return msg
+
+
+def is_empty_folder(path):
+    if not os.path.exists(path):
+        return False
+    return len(os.listdir(path)) == 0
+
+
+def delete_empty_folders(root_path):
+    for folder_path, _, _ in os.walk(root_path, topdown=False):
+        if is_empty_folder(folder_path):
+            print(f"Deleting empty folder: {folder_path}")
+            os.rmdir(folder_path)

@@ -213,14 +213,17 @@ def web_scraper(url: str) -> None | bool:
     except (TimeoutException, NoSuchElementException):
         print("Element waiting timeout error")
         print(common.abort_scraping_msg(url))
+        common.delete_empty_folders(folder_path)
         return False
     except StaleElementReferenceException:
         print(f"Page elements are no longer valid")
         print(common.abort_scraping_msg(url))
+        common.delete_empty_folders(folder_path)
         return False
     except Exception as e:
-        print(f"Scraping error: {e}")
+        print(f"Unknown scraping error: {e}")
         print(common.abort_scraping_msg(url))
+        common.delete_empty_folders(folder_path)
         return False
     finally:
         # close browser

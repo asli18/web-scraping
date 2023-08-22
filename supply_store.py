@@ -207,16 +207,19 @@ def web_scraper(url: str) -> None | bool:
 
         start_scraping(driver, url, output_info, total_pages)
 
+        print()
+        print(f"Total pages: {total_pages}")
+        print(f"Total valid products: {output_info.product_count}")
+
     except Exception as e:
         print(f"Unknown scraping error: {e}")
         print(common.abort_scraping_msg(url))
-        common.delete_empty_folders(folder_path)
-        return False
+
     finally:
         # close browser
         driver.quit()
 
-    print()
-    print(f"Total pages: {total_pages}")
-    print(f"Total valid products: {output_info.product_count}")
+    if not output_info.product_count:
+        common.delete_empty_folders(folder_path)
+
     print("------------------------------------------------------------------------\n")

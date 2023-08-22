@@ -62,10 +62,10 @@ def scrape_upthere_store() -> None:
         upthere_scraper.execute_scraper(upthere_store.gen_store_sale_url(brand))
 
     # Error cases, invalid URL
-    # upthere.execute_scraper("http://www.invalid-domain.com")
-    # upthere.execute_scraper("https://www.example.com")
-    # upthere.execute_scraper("https://www.example.com/nonexistent-page")
-    # upthere.execute_scraper("https://www.example.com/internal-server-error")
+    # upthere_scraper.execute_scraper("http://www.invalid-domain.com")
+    # upthere_scraper.execute_scraper("https://www.example.com")
+    # upthere_scraper.execute_scraper("https://www.example.com/nonexistent-page")
+    # upthere_scraper.execute_scraper("https://www.example.com/internal-server-error")
 
 
 def scrape_supply_store() -> None:

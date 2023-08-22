@@ -261,7 +261,6 @@ def image_post_processing(output_info: OutputInfo):
 
 def abort_scraping_msg(url: str) -> str:
     msg = f"\nAbort scraping: {url}\n"
-    msg += "------------------------------------------------------------------------\n"
     return msg
 
 

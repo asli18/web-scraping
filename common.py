@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import os
+import math
 import time
 from datetime import timedelta
 
@@ -19,12 +20,15 @@ from store_info import OutputInfo
 
 # Helper function to convert seconds to days, hours, minutes, and seconds
 def convert_seconds_to_time(sec):
-    duration = timedelta(seconds=sec)
-    _days = duration.days
-    _hours = duration.seconds // 3600
-    _minutes = (duration.seconds // 60) % 60
-    _seconds = duration.seconds % 60
-    return _days, _hours, _minutes, _seconds
+    try:
+        duration = timedelta(seconds=sec)
+        _days = duration.days
+        _hours = duration.seconds // 3600
+        _minutes = (duration.seconds // 60) % 60
+        _seconds = duration.seconds % 60
+        return _days, _hours, _minutes, _seconds
+    except TypeError:
+        raise
 
 
 # Helper function to get the exchange rate for Australian Dollar (AUD) from Bank of Taiwan
@@ -76,8 +80,8 @@ def calculate_profitable_price(cost) -> int:
         profit_rate = 0.063  # 6.3% profit
         selling_price = cost * (1 + profit_rate)
 
-    # Round the price to the nearest even ten
-    selling_price = round(selling_price / 20) * 20
+    # Round to the next higher multiple of 20
+    selling_price = int(math.ceil(selling_price / 20) * 20)
 
     return selling_price
 

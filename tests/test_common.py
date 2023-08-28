@@ -80,15 +80,12 @@ def test_abort_scraping_msg():
     assert expect == common.abort_scraping_msg(input_str)
 
 
-def test_is_empty_folder():
+def test_is_empty_folder(tmp_path):
     tests_path = os.path.dirname(os.path.abspath(__file__))
-    empty_folder_path = os.path.join(tests_path, "test_is_empty_folder")
-    os.mkdir(empty_folder_path)
+    empty_folder_path = str(tmp_path)
 
     assert common.is_empty_folder(tests_path) is False
     assert common.is_empty_folder(empty_folder_path) is True
-
-    os.rmdir(empty_folder_path)
 
 
 def test_delete_empty_folders():

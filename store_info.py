@@ -44,8 +44,8 @@ class ProductInfo:
 
 
 class OutputInfo:
-    def __init__(self, store_name: str, group: str, output_path: str,
-                 background_color: tuple, product_info):
+    def __init__(self, store_name: str | None, group: str | None, output_path: str,
+                 background_color: tuple | None, product_info):
         self.store_name = store_name
         self.group = group
         self.output_path = output_path

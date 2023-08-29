@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
@@ -40,6 +39,7 @@ jobs:
     needs: build
 
     steps:
+      - uses: actions/checkout@v3
       - name: Pytest summary
         # You may pin to the exact commit or the version.
         # uses: dariocurr/pytest-summary@a5a006eee4e77f75c1502b8771a6fe64bd133fcf

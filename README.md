@@ -5,8 +5,10 @@
 ##### python packages
 
 ```bash
-pip3 install Pillow requests beautifulsoup4 selenium webdriver-manager
+pip3 install Pillow requests beautifulsoup4 selenium
 pip3 install pytest pytest-cov pytest-xdist pytest-html
+# or
+pip3 install -r requirements.txt
 ```
 
 The `pytest` command installed by pip3 may not be in the system's PATH,

@@ -125,7 +125,7 @@ def main() -> None:
         aud_exchange_rate = None
 
     if aud_exchange_rate is None:
-        print(f"Unable to find the exchange rate for Australian Dollar (AUD)")
+        print("Unable to find the exchange rate for Australian Dollar (AUD)")
         return
 
     print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")

@@ -149,7 +149,7 @@ def web_scraper(url: str) -> None | bool:
 
     print("-------------------------- [ Start scraping ] --------------------------")
     section = url.split("/")[-1]
-    print("Section:", section)
+    print(f"Section: {section}")
 
     folder_path = os.path.join(".", "output", store_name, section)
 
@@ -158,7 +158,7 @@ def web_scraper(url: str) -> None | bool:
         if os.path.isdir(folder_path):
             shutil.rmtree(folder_path)
         else:
-            print("Path is not a directory:", folder_path)
+            print(f"Path is not a directory: {folder_path}")
             return False
 
     os.makedirs(folder_path)

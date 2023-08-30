@@ -72,7 +72,7 @@ def product_info_processor(page_source, output_info: OutputInfo):
         product_element_class = '_8T7q2GDqmgeWgJYhbInA1'
         product_elements = soup.find_all('div', class_=product_element_class)
     except Exception:
-        print(f"Product class pattern not found")
+        print("Product class pattern not found")
         raise
 
     for element in product_elements:
@@ -237,7 +237,7 @@ def web_scraper(url: str) -> None | bool:
     print("-------------------------- [ Start scraping ] --------------------------")
 
     section = get_brand_name_from_url(url)
-    print("Section:", section)
+    print(f"Section: {section}")
 
     folder_path = os.path.join(".", "output", store_name, section)
 
@@ -246,7 +246,7 @@ def web_scraper(url: str) -> None | bool:
         if os.path.isdir(folder_path):
             shutil.rmtree(folder_path)
         else:
-            print("Path is not a directory:", folder_path)
+            print(f"Path is not a directory: {folder_path}")
             return False
 
     os.makedirs(folder_path)

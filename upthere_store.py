@@ -137,7 +137,7 @@ def wait_for_page_load(driver: webdriver, timeout=5):
         except NoSuchElementException:
             elapsed_time = time.time() - s_time
             if elapsed_time >= timeout:
-                print(f"'product__subtitle' not found under 'product-grid', timeout")
+                print("'product__subtitle' not found under 'product-grid', timeout")
                 raise
             # print(f"'product__subtitle' not found under 'product-grid', retry...")
             time.sleep(0.3)
@@ -172,7 +172,7 @@ def web_scraper(url: str) -> None | bool:
 
     print("-------------------------- [ Start scraping ] --------------------------")
     section = url.split("/")[-1]
-    print("Section:", section)
+    print(f"Section: {section}")
 
     folder_path = os.path.join(".", "output", store_name, section)
 
@@ -181,7 +181,7 @@ def web_scraper(url: str) -> None | bool:
         if os.path.isdir(folder_path):
             shutil.rmtree(folder_path)
         else:
-            print("Path is not a directory:", folder_path)
+            print(f"Path is not a directory: {folder_path}")
             return False
 
     os.makedirs(folder_path)
@@ -211,7 +211,7 @@ def web_scraper(url: str) -> None | bool:
             # Get the total number of pages
             total_pages = max([int(num) for num in page_numbers])
         else:
-            print(f"Unexpected page_elements len, save HTML as error_page_source.html")
+            print("Unexpected page_elements len, save HTML as error_page_source.html")
             common.save_html_to_file(html_content, "error_page_source.html")
             raise StaleElementReferenceException
 
@@ -226,7 +226,7 @@ def web_scraper(url: str) -> None | bool:
         print(common.abort_scraping_msg(url))
 
     except StaleElementReferenceException:
-        print(f"Page elements are no longer valid")
+        print("Page elements are no longer valid")
         print(common.abort_scraping_msg(url))
 
     except Exception as e:

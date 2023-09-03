@@ -9,6 +9,7 @@ from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
 import common
@@ -64,9 +65,12 @@ def product_info_processor(page_source, output_info: OutputInfo):
             # print(f"image url {index}: {image_url}")
             image_urls.append(image_url)
 
+        margin = 1.03
+        aud_twd = common.get_aud_exchange_rate() * margin
+
         # Parse price string to int
-        original_price = product_price_parser(original_price)
-        sale_price = product_price_parser(sale_price)
+        original_price = round(product_price_parser(original_price) * aud_twd)
+        sale_price = round(product_price_parser(sale_price) * aud_twd)
 
         shipping_fee = 850
         tw_import_duty_rate = 1.16
@@ -128,7 +132,19 @@ def wait_for_page_load(driver: webdriver, timeout=5):
 
             # Find the "product__subtitle" element under the "product-grid" element
             product_grid.find_element(By.CLASS_NAME, "product__subtitle")
-            break  # found it
+
+            currency_select = WebDriverWait(driver, timeout).until(
+                ec.presence_of_element_located((By.CSS_SELECTOR, 'select[name="currency"]')))
+
+            currency_select = Select(currency_select)
+            selected_option = currency_select.first_selected_option
+            selected_currency = selected_option.get_attribute("value")
+            print(f"Selected currency: {selected_currency}")
+
+            if selected_currency != "AUD":
+                currency_select.select_by_value("AUD")
+            else:
+                break  # found it
 
         except TimeoutException:
             print("Timeout: 'product-grid' not found before the timeout.")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import logging
-import os
 import math
+import os
 import time
 from datetime import timedelta
 

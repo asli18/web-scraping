@@ -52,7 +52,7 @@ def append_text_to_filename(file_path, text):
 
 def get_image_size(image_path):
     with Image.open(image_path) as image:
-        width, height = image.open(image_path).size
+        width, height = image.size
         return width, height
 
 
@@ -136,6 +136,12 @@ def expand_and_center_image(image_path, output_path, new_size, background_color=
 # Example usage
 def example() -> None:
     try:
+        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
+        font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
+        if not os.path.exists(font_path):
+            print(f"Font file not found: {font_path}")
+            return
+
         insert_text = "Hello!\nSpace"
         size = 40
         position = (30, 10)
@@ -143,12 +149,12 @@ def example() -> None:
         input_file_path = "./image_sample/astronaut.png"
         output_file_path = change_file_extension(append_text_to_filename(input_file_path, "_mod"), ".jpg")
         # output_file_path = "./image_sample/astronaut_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, insert_text, size, position)
+        add_text_to_image(input_file_path, output_file_path, font_path, insert_text, size, position)
 
         input_file_path = "./image_sample/lightning.jpg"
         output_file_path = append_text_to_filename(input_file_path, "_mod")
         # output_file_path = "./image_sample/lightning_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, insert_text, size, position)
+        add_text_to_image(input_file_path, output_file_path, font_path, insert_text, size, position)
 
     except (Exception, ImageProcessingError) as e:
         print(f"Error occurred during image processing: {e}")
@@ -156,6 +162,12 @@ def example() -> None:
 
 def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
     try:
+        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
+        font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
+        if not os.path.exists(font_path):
+            print(f"Font file not found: {font_path}")
+            return
+
         # Get the size of the original image
         width, height = get_image_size(image_path)
 
@@ -174,7 +186,8 @@ def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
 
         expand_and_center_image(image_path, output_file_path, (width, new_height))
 
-        add_text_to_image(output_file_path, output_file_path, insert_text, text_size, text_position)
+        add_text_to_image(output_file_path, output_file_path, font_path, insert_text,
+                          text_size, text_position)
 
     except (Exception, ImageProcessingError) as e:
         print(f"Error occurred during image processing: {e}")

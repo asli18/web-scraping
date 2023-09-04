@@ -49,3 +49,22 @@ pytest -v --html=report.html --self-contained-html # generating HTML report
 ```bash
 python3 run_scraper.py
 ```
+
+#### Build executable file
+- Installation:
+  - `pip3 install pyinstaller`
+- Build
+  - `pyinstaller -F run_scraper.py`  
+    - `-F, --onefile` Create a one-file bundled executable.
+  - output:
+    - ubuntu: `dist/run_scraper`
+    - windows: `dist/run_scraper.exe`
+
+- **Notice**
+  - ***Please ensure that the executable file is placed alongside the font 
+    file(`SourceSerifPro-SemiBold.ttf`) during execution.*** 
+    ```Markdown
+    app_folder/
+    ├── run_scraper
+    └── SourceSerifPro-SemiBold.ttf
+    ```

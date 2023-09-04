@@ -63,7 +63,7 @@ def test_download_product_img(tmp_path):
                     "https://raw.githubusercontent.com/asli18/web-scraping/main/image_sample/lightning.jpg",
                     None,
                     None)
-    output_info = OutputInfo(None, None, str(tmp_path), None, product_info)
+    output_info = OutputInfo(None, None, str(tmp_path), None, None, product_info)
 
     common.download_product_img(output_info)
 

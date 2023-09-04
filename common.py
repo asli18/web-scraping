@@ -247,8 +247,8 @@ def image_post_processing(output_info: OutputInfo):
 
     try:
         # Add a string text to the image
-        image_editor.add_text_to_image(output_file_path, output_file_path, insert_text,
-                                       text_size, text_position)
+        image_editor.add_text_to_image(output_file_path, output_file_path, output_info.font_path,
+                                       insert_text, text_size, text_position)
     except Exception as e:
         print(f"Image post-processing [Add a string text to the image] error:  {e}")
         raise

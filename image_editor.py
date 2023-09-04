@@ -9,36 +9,37 @@ class ImageProcessingError(Exception):
 
 
 # Add text to an image (JPEG or PNG) and save the output as a JPEG file
-def add_text_to_image(in_file_path: str, out_file_path: str, text: str, size, position):
-    if not isinstance(in_file_path, str):
-        raise ImageProcessingError(f"Invalid 'in_file_path' parameter. Expected string, got {type(in_file_path)}")
-    if not isinstance(out_file_path, str):
-        raise ImageProcessingError(f"Invalid 'in_file_path' parameter. Expected string, got {type(out_file_path)}")
-    if not isinstance(text, str):
-        raise ImageProcessingError(f"Invalid 'text' parameter. Expected string, got {type(text)}")
-
+def add_text_to_image(in_file_path: str, out_file_path: str, font_path: str, text: str, size, position):
     # Check if the output directory exists
     output_directory = os.path.dirname(out_file_path)
     if not os.path.exists(output_directory):
         raise ImageProcessingError(f"Output directory does not exist: {output_directory}")
 
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"Error processing font file: {font_path}")
+
     try:
-        image = Image.open(in_file_path)
-    except (FileNotFoundError, OSError):
-        raise ImageProcessingError(f"Invalid image path: {in_file_path}")
+        # Open the image and ensure the file is properly closed using a context manager
+        with Image.open(in_file_path) as image:
+            # Convert the image to RGB mode (if it's in RGBA format)
+            image = image.convert("RGB")
 
-    # Convert the image to RGB mode if it is in RGBA format (PNG file)
-    image = image.convert("RGB")
+            # Get the DPI value
+            dpi = image.info.get("dpi")
 
-    dpi = image.info.get("dpi")
+            # Create a drawing object to add text
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.truetype(font_path, size)
 
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("SourceSerifPro-SemiBold.ttf", size)
+            # Draw text on the image
+            draw.text(position, text, font=font, fill=(0, 0, 0))
 
-    draw.text(position, text, font=font, fill=(0, 0, 0))
+            # Save the modified image
+            image.save(out_file_path, dpi=dpi)
+            print(f"Saved modified image as: {out_file_path}")
 
-    image.save(out_file_path, dpi=dpi)
-    print(f"Saved modified image as: {out_file_path}")
+    except (FileNotFoundError, OSError, IOError, SyntaxError) as e:
+        raise ImageProcessingError(f"Error processing image: {e}")
 
 
 def append_text_to_filename(file_path, text):
@@ -50,9 +51,9 @@ def append_text_to_filename(file_path, text):
 
 
 def get_image_size(image_path):
-    image = Image.open(image_path)
-    width, height = image.size
-    return width, height
+    with Image.open(image_path) as image:
+        width, height = image.open(image_path).size
+        return width, height
 
 
 def delete_image(image_path):
@@ -81,7 +82,8 @@ def change_file_extension(file_path, new_extension):
     return new_file_path
 
 
-def expand_and_center_image(image_path, output_path, new_size, background_color=(255, 255, 255)):
+def expand_and_center_image(image_path, output_path, new_size, background_color=(255, 255, 255),
+                            min_dpi=300):
     """
     Expand the image to the new size with a specified background color and center the original image.
 
@@ -89,47 +91,46 @@ def expand_and_center_image(image_path, output_path, new_size, background_color=
         image_path (str): Path to the original image.
         output_path (str): Path to save the new image.
         new_size (tuple): New size of the image in the format (width, height).
-        background_color (tuple, optional): Background color as an RGB tuple (default is white - (255, 255, 255)).
+        background_color (tuple, optional): Background color as an RGB tuple
+                                            (default is white - (255, 255, 255)).
+        min_dpi (int): minimum DPI for output file (default is 300)
 
     Raises:
         ImageProcessingError: If there are any errors during image processing.
     """
 
-    # Open the original image
     try:
-        image = Image.open(image_path)
+        # Open the original image using a context manager
+        with Image.open(image_path) as image:
+            # Convert the image to RGB mode if it is in RGBA format (PNG file)
+            image = image.convert("RGB")
+
+            # Get the DPI value and ensure it meets the minimum requirement
+            dpi = image.info.get("dpi", (min_dpi, min_dpi))
+            dpi = (max(dpi[0], min_dpi), max(dpi[1], min_dpi))
+
+            # Get the size of the original image and the new image
+            original_size = image.size
+            new_width, new_height = new_size
+
+            # Create a new blank image and fill it with the specified background color
+            new_image = Image.new("RGB", new_size, background_color)
+
+            # Calculate the placement position of the original image in the new image to keep it centered
+            offset = ((new_width - original_size[0]) // 2, (new_height - original_size[1]) // 2)
+
+            # Paste the original image onto the center of the new image
+            new_image.paste(image, offset)
+
+            # Save the new image
+            new_image.save(output_path, dpi=dpi)
+
     except (FileNotFoundError, OSError):
         raise ImageProcessingError(f"Invalid image path: {image_path}")
-
-    # Convert the image to RGB mode if it is in RGBA format (PNG file)
-    image = image.convert("RGB")
-
-    dpi = image.info.get("dpi")
-    # If the DPI value does not exist, set it to (300, 300).
-    if dpi is None:
-        dpi = (300, 300)
-    # Otherwise, check each direction if it is less than 300, and if so, adjust it to 300.
-    else:
-        dpi = (max(dpi[0], 300), max(dpi[1], 300))
-
-    # Get the size of the original image and the new image
-    original_size = image.size
-    new_width, new_height = new_size
-
-    # Create a new blank image and fill it with the specified background color
-    new_image = Image.new("RGB", new_size, background_color)
-
-    # Calculate the placement position of the original image in the new image to keep it centered
-    offset = ((new_width - original_size[0]) // 2, (new_height - original_size[1]) // 2)
-
-    try:
-        # Paste the original image onto the center of the new image
-        new_image.paste(image, offset)
-
-        # Save the new image
-        new_image.save(output_path, dpi=dpi)
-    except Exception as e:
-        raise ImageProcessingError(f"Error during image processing:  {e}")
+    except FileNotFoundError:
+        raise ImageProcessingError(f"Image not found: {image_path}")
+    except OSError as e:
+        raise ImageProcessingError(f"Error processing image: {e}")
 
 
 # Example usage

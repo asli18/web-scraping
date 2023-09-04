@@ -4,4 +4,6 @@ venv/
 *.pyc
 *.pyo
 .coverage
-output
+output/
+build/
+dist/

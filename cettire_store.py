@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import shutil
+import sys
 import time
 import urllib.parse
 
@@ -235,11 +236,20 @@ def web_scraper(url: str) -> None | bool:
         return False
 
     print("-------------------------- [ Start scraping ] --------------------------")
-
     section = get_brand_name_from_url(url)
     print(f"Section: {section}")
 
-    folder_path = os.path.join(".", "output", store_name, section)
+    if getattr(sys, 'frozen', False):
+        app_dir = os.path.dirname(sys.executable)  # pyinstaller executable
+    else:
+        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
+
+    font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
+    if not os.path.exists(font_path):
+        print(f"Font file not found: {font_path}")
+        return False
+
+    folder_path = os.path.join(app_dir, "output", store_name, section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):
@@ -253,7 +263,7 @@ def web_scraper(url: str) -> None | bool:
     os.makedirs(os.path.join(folder_path, "mod"))
 
     product_image_bg_color = (255, 255, 255)  # default is white
-    output_info = OutputInfo(store_name, section, folder_path, product_image_bg_color, None)
+    output_info = OutputInfo(store_name, section, folder_path, font_path, product_image_bg_color, None)
     output_info.display_info()
 
     driver = common.chrome_driver()

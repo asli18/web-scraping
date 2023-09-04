@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import time
 import timeit
 
@@ -135,10 +136,9 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    store_name_dict = {}
-    upthere_scraper = StoreWebScraper(store_name_dict, "upthere", upthere_store.web_scraper)
-    supply_scraper = StoreWebScraper(store_name_dict, "supply", supply_store.web_scraper)
-    cettire_scraper = StoreWebScraper(store_name_dict, "cettire", cettire_store.web_scraper)
+    upthere_scraper = StoreWebScraper(upthere_store.web_scraper)
+    supply_scraper = StoreWebScraper(supply_store.web_scraper)
+    cettire_scraper = StoreWebScraper(cettire_store.web_scraper)
 
     start_time = time.perf_counter()
 
@@ -153,3 +153,6 @@ if __name__ == '__main__':
 
     days, hours, minutes, seconds = common.convert_seconds_to_time(execution_time / 1e3)
     print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec")
+
+    if getattr(sys, 'frozen', False):
+        input("Press any key to exit...")

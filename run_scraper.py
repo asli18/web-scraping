@@ -10,10 +10,6 @@ import upthere_store
 from store_info import StoreWebScraper
 
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
 def scrape_upthere_store() -> None:
     brands = [
         "Needles",
@@ -74,15 +70,13 @@ def scrape_cettire_store() -> None:
 
     # All category of products
     cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Common Projects"))
-    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island"))
-    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island Shadow Project"))
+    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island"))
+    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island Shadow Project"))
 
     # Bags
     brands = [
         "A.P.C.",
         "Balenciaga",
-        "Comme des Garçons Wallet",
-        "Gucci",
         "Jil Sander",
         "Lemaire",
         "Loewe",
@@ -123,9 +117,6 @@ def main() -> None:
 
     except Exception as e:
         print(f"Error occurred during get_aud_exchange_rate(): {e}")
-        aud_exchange_rate = None
-
-    if aud_exchange_rate is None:
         print("Unable to find the exchange rate for Australian Dollar (AUD)")
         return
 

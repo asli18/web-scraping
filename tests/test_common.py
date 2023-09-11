@@ -8,7 +8,6 @@ from PIL import Image
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import common
-from store_info import OutputInfo, ProductInfo
 
 
 @pytest.mark.parametrize("expected_result, input_sec", [
@@ -56,19 +55,15 @@ def test_check_url_validity(url, expected_result):
 
 
 def test_download_product_img(tmp_path):
+    url = "https://raw.githubusercontent.com/asli18/web-scraping/main/image_sample/lightning.jpg"
+    image_name = "lightning.jpg"
+    download_image_path = os.path.join(str(tmp_path), image_name)
+
+    common.download_image_from_url(url, download_image_path)
+
     tests_path = os.path.dirname(os.path.abspath(__file__))
-    product_info = \
-        ProductInfo(0, "Pytest", "test_download_product_img - lightning",
-                    0, 0, 0, 0,
-                    "https://raw.githubusercontent.com/asli18/web-scraping/main/image_sample/lightning.jpg",
-                    None,
-                    None)
-    output_info = OutputInfo(None, None, str(tmp_path), None, None, product_info)
-
-    common.download_product_img(output_info)
-
-    download_image_path = os.path.join(tmp_path, product_info.image1_filename)
-    golden_image_path = os.path.join(os.path.dirname(tests_path), "image_sample", "lightning.jpg")
+    golden_image_folder = "image_sample"
+    golden_image_path = os.path.join(os.path.dirname(tests_path), golden_image_folder, image_name)
 
     with (Image.open(download_image_path) as download_image,
           Image.open(golden_image_path) as golden_image):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import logging
 import math
 import os
 import time
@@ -13,9 +12,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
-import image_editor
 from exceptions import InvalidInputError
-from store_info import OutputInfo
 
 
 # Helper function to convert seconds to days, hours, minutes, and seconds
@@ -124,23 +121,22 @@ def check_url_validity(url: str) -> bool:
         return False
 
 
-# Helper function to download a product image
-def download_product_img(output_info: OutputInfo):
-    output_path = os.path.join(output_info.output_path, output_info.product_info.image1_filename)
-    url = output_info.product_info.image1_src
-
-    if output_path is None or not isinstance(output_path, str):
+# Helper function to download a image
+def download_image_from_url(url, output_path):
+    if not isinstance(output_path, str) or not output_path:
         raise InvalidInputError(
             f"Invalid output_path parameter: '{output_path}' "
-            f"({download_product_img.__name__})"
+            f"in function '{download_image_from_url.__name__}'"
         )
 
-    if url is None or not isinstance(url, str):
-        raise InvalidInputError(f"Invalid url parameter: '{url}' ({download_product_img.__name__})")
+    if not isinstance(url, str) or not url:
+        raise InvalidInputError(
+            f"Invalid url parameter: '{url}' in function '{download_image_from_url.__name__}'"
+        )
 
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Check if the download is successful, raise an exception if there is an error
+        response.raise_for_status()  # Verify download success, raise exception on error.
 
         print(f"Image download to path: {output_path}")
         with open(output_path, "wb") as file:
@@ -158,110 +154,6 @@ def download_product_img(output_info: OutputInfo):
     except Exception as e:
         print(f"Unknown error: {e}")
         raise e
-
-
-# Helper function to log product information to a file
-def product_info_logging(output_info: OutputInfo):
-    log_path = os.path.join(output_info.output_path, 'list.txt')
-
-    # Create a new logger object
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    # Set a custom log format
-    formatter = logging.Formatter('%(message)s')
-
-    # Create a log file handler and set the output file name and format
-    file_handler = logging.FileHandler(log_path, encoding='utf-8')
-    file_handler.setFormatter(formatter)
-
-    # Add the log file handler to the logger
-    logger.addHandler(file_handler)
-
-    _ = output_info.product_info
-    logger.info(f"---- [ Product No.{_.index} ] ----")
-    logger.info(f"Brand:          {_.brand}")
-    logger.info(f"Name:           {_.title}")
-    logger.info(f"Retail Price:   ${_.original_price:,}")
-    logger.info(f"Sale Price:     ${_.sale_price:,}")
-    logger.info(f"Estimated cost: ${_.cost:,}")
-    logger.info(f"Selling Price:  ${_.selling_price:,}")
-    logger.info(f"Photo 1 URL:    {_.image1_src}")
-    logger.info(f"Photo 2 URL:    {_.image2_src}")
-    logger.info(f"Product URL:    {_.product_url}")
-    logger.info("")
-
-    # Clean up logger object handler
-    logger.handlers.clear()
-
-
-def image_post_processing(output_info: OutputInfo):
-    print("Image post-processing")
-
-    input_file_path = os.path.join(output_info.output_path, output_info.product_info.image1_filename)
-
-    directory, filename = os.path.split(input_file_path)
-    output_file_path = os.path.join(directory, "mod", filename)
-
-    insert_text = f"{output_info.product_info.brand}\n" \
-                  f"{output_info.product_info.title}\n" \
-                  f"${output_info.product_info.selling_price:,}"
-
-    # Get the size of the original image
-    width, height = image_editor.get_image_size(input_file_path)
-
-    # Calculate the aspect ratio of the original image
-    aspect_ratio = width / height
-
-    # Resize image for IG Stories (9:16) maintaining the original aspect ratio.
-    target_aspect_ratio = 9 / 16
-
-    if aspect_ratio > target_aspect_ratio:
-        # Original image is wider, so we use the width for resizing
-        new_width = width
-        new_height = int(width / target_aspect_ratio)
-    else:
-        # Original image is taller, so we use the height for resizing
-        new_height = height
-        new_width = int(height * target_aspect_ratio)
-
-    if new_width < 800:
-        new_width = 800
-        new_height = int(new_width / target_aspect_ratio)
-
-    image_width_to_text_ratio = 29
-    text_size = round(new_width / image_width_to_text_ratio)
-
-    image_width_to_text_position_x_ratio = 30.53
-    image_height_to_text_position_y_ratio = 7.3
-    text_position = (round(new_width / image_width_to_text_position_x_ratio),
-                     round(new_height / image_height_to_text_position_y_ratio))
-
-    try:
-        # Expand the image
-        image_editor.expand_and_center_image(input_file_path, output_file_path, (new_width, new_height),
-                                             output_info.image_background_color)
-    except Exception as e:
-        print(f"Image post-processing [Expand the image] error: {e}")
-        raise
-
-    try:
-        # Add a string text to the image
-        image_editor.add_text_to_image(output_file_path, output_file_path, output_info.font_path,
-                                       insert_text, text_size, text_position)
-    except Exception as e:
-        print(f"Image post-processing [Add a string text to the image] error:  {e}")
-        raise
-
-    try:
-        # Remove unnecessary source file
-        image_editor.delete_image(input_file_path)
-        # shutil.move(output_file_path, input_file_path)
-    except Exception as e:
-        print(f"Image post-processing [Remove unnecessary source file] error:  {e}")
-        raise
-
-    print("Image post-processing completed")
 
 
 def abort_scraping_msg(url: str) -> str:

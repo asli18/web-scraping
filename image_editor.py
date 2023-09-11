@@ -133,6 +133,63 @@ def expand_and_center_image(image_path, output_path, new_size, background_color=
         raise ImageProcessingError(f"Error processing image: {e}")
 
 
+def resize_for_ig_story(input_file_path, image_background_color):
+    width, height = get_image_size(input_file_path)
+    aspect_ratio = width / height
+
+    # Resize image for IG Stories (9:16) maintaining the original aspect ratio.
+    target_aspect_ratio = 9 / 16
+
+    if aspect_ratio > target_aspect_ratio:
+        # Original image is wider, so we use the width for resizing
+        new_width = width
+        new_height = int(width / target_aspect_ratio)
+    else:
+        # Original image is taller, so we use the height for resizing
+        new_height = height
+        new_width = int(height * target_aspect_ratio)
+
+    if new_width < 800:
+        new_width = 800
+        new_height = int(new_width / target_aspect_ratio)
+
+    try:
+        expand_and_center_image(input_file_path, input_file_path, (new_width, new_height),
+                                image_background_color)
+    except Exception as e:
+        print(f"Resize the image error: {e}")
+        raise
+
+    return new_width, new_height
+
+
+def insert_text_to_ig_story(input_file_path, font_path, insert_text):
+    width, height = get_image_size(input_file_path)
+
+    image_width_to_text_ratio = 29
+    text_size = round(width / image_width_to_text_ratio)
+
+    image_width_to_text_position_x_ratio = 30.53
+    image_height_to_text_position_y_ratio = 7.3
+    text_position = (round(width / image_width_to_text_position_x_ratio),
+                     round(height / image_height_to_text_position_y_ratio))
+    try:
+        add_text_to_image(input_file_path, input_file_path, font_path,
+                          insert_text, text_size, text_position)
+    except Exception as e:
+        print(f"Insert text to IG story image error:  {e}")
+        raise
+
+
+def ig_story_image_processing(input_file_path, image_background_color, font_path, insert_text):
+    print("IG Story Image processing")
+
+    resize_for_ig_story(input_file_path, image_background_color)
+    insert_text_to_ig_story(input_file_path, font_path, insert_text)
+
+    print("IG Story Image processing completed")
+
+
 # Example usage
 def example() -> None:
     try:
@@ -160,7 +217,7 @@ def example() -> None:
         print(f"Error occurred during image processing: {e}")
 
 
-def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
+def create_ig_story_image_example(image_path: str, insert_text: str = "") -> None:
     try:
         app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
         font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
@@ -168,7 +225,6 @@ def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
             print(f"Font file not found: {font_path}")
             return
 
-        # Get the size of the original image
         width, height = get_image_size(image_path)
 
         # Resize image for IG Stories (9:16).
@@ -195,4 +251,4 @@ def create_ig_story_image(image_path: str, insert_text: str = "") -> None:
 
 if __name__ == '__main__':
     example()
-    create_ig_story_image("./image_sample/lightning.jpg", "Lightning")
+    create_ig_story_image_example("./image_sample/lightning.jpg", "Lightning")

@@ -13,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
 import common
+import image_editor
 from store_info import OutputInfo, ProductInfo
 
 
@@ -145,14 +146,18 @@ def product_info_processor(page_source, output_info: OutputInfo):
         output_info.product_info.display_info()
 
         try:
-            # Download product image
-            common.download_product_img(output_info)
-            # Image post-processing
-            common.image_post_processing(output_info)
-            # Product information logging
-            common.product_info_logging(output_info)
+            input_file_path = os.path.join(output_info.output_dir,
+                                           output_info.product_info.image1_filename)
+
+            common.download_image_from_url(output_info.product_info.image1_src, input_file_path)
+
+            image_editor.ig_story_image_processing(input_file_path, output_info.image_background_color,
+                                                   output_info.font_path,
+                                                   output_info.product_info.image1_insert_text)
+
+            output_info.product_info_logging()
         except Exception as e:
-            print(f"Image processing failed: {e}")
+            print(f"Product image processing failed: {e}")
             raise
 
 
@@ -260,7 +265,6 @@ def web_scraper(url: str) -> None | bool:
             return False
 
     os.makedirs(folder_path)
-    os.makedirs(os.path.join(folder_path, "mod"))
 
     product_image_bg_color = (255, 255, 255)  # default is white
     output_info = OutputInfo(store_name, section, folder_path, font_path, product_image_bg_color, None)

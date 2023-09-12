@@ -84,28 +84,26 @@ def product_info_processor(page_source, output_info: OutputInfo):
         if selling_price > original_price:
             continue  # not profitable
 
-        # Product image parsing and post-processing
-
         output_info.product_count += 1
-        output_info.product_info = \
-            ProductInfo(output_info.product_count, brand, title,
-                        original_price, sale_price, cost, selling_price,
-                        image_urls[0] if len(image_urls) >= 1 else None,
-                        image_urls[1] if len(image_urls) >= 2 else None,
-                        product_url)
-        output_info.product_info.display_info()
+        product_info = \
+            ProductInfo(index=output_info.product_count, brand=brand, title=title,
+                        original_price=original_price, sale_price=sale_price,
+                        cost=cost, selling_price=selling_price,
+                        image1_src=image_urls[0] if len(image_urls) >= 1 else "",
+                        image2_src=image_urls[1] if len(image_urls) >= 2 else "",
+                        product_url=product_url)
+        product_info.display_info()
 
         try:
-            input_file_path = os.path.join(output_info.output_dir,
-                                           output_info.product_info.image1_filename)
+            input_file_path = os.path.join(output_info.output_dir, product_info.image1_filename)
 
-            common.download_image_from_url(output_info.product_info.image1_src, input_file_path)
+            common.download_image_from_url(product_info.image1_src, input_file_path)
 
             image_editor.ig_story_image_processing(input_file_path, output_info.image_background_color,
                                                    output_info.font_path,
-                                                   output_info.product_info.image1_insert_text)
+                                                   product_info.image1_insert_text)
 
-            output_info.product_info_logging()
+            product_info.product_info_logging(output_info.output_dir)
         except Exception as e:
             print(f"Product image processing failed: {e}")
             raise
@@ -219,7 +217,8 @@ def web_scraper(url: str) -> None | bool:
     os.makedirs(folder_path)
 
     product_image_bg_color = (238, 240, 242)  # the background color of store product image
-    output_info = OutputInfo(store_name, section, folder_path, font_path, product_image_bg_color, None)
+    output_info = OutputInfo(store_name=store_name, group=section, output_dir=folder_path,
+                             font_path=font_path, image_background_color=product_image_bg_color)
     output_info.display_info()
 
     driver = common.chrome_driver()

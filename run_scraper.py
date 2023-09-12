@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import os
 import sys
 import time
-import timeit
+
+import psutil
 
 import cettire_store
 import common
@@ -127,23 +129,30 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    process = psutil.Process(os.getpid())
+    before_memory = process.memory_info().rss
+
     upthere_scraper = StoreWebScraper(upthere_store.web_scraper)
     supply_scraper = StoreWebScraper(supply_store.web_scraper)
     cettire_scraper = StoreWebScraper(cettire_store.web_scraper)
 
     start_time = time.perf_counter()
 
-    # main()
-    execution_timeit = timeit.timeit(main, number=1) * 1e3
+    main()
 
     end_time = time.perf_counter()
-    execution_time = (end_time - start_time) * 1e3
+    execution_time = end_time - start_time
 
-    print(f"Elapsed time: {execution_timeit:.3f} ms (by timeit)")
-    print(f"Elapsed time: {execution_time:.3f} ms (by perf_counter)")
+    memory_peak = process.memory_info().peak_wset / 1024 / 1024  # MB
+    print(f"Memory peak: {memory_peak} MB")
 
-    days, hours, minutes, seconds = common.convert_seconds_to_time(execution_time / 1e3)
-    print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec")
+    after_memory = process.memory_info().rss
+    memory_used = (after_memory - before_memory) / 1024 / 1024  # MB
+    print(f"Memory usage: {memory_used} MB")
+
+    days, hours, minutes, seconds = common.convert_seconds_to_time(execution_time)
+    print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec "
+          f"({execution_time:.3f} s)")
 
     if getattr(sys, 'frozen', False):
         input("Press any key to exit...")

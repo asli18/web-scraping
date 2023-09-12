@@ -91,10 +91,15 @@ def chrome_driver(max_retry=3, retry_delay=2) -> webdriver:
             chrome_options = Options()
             chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
             chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
+            chrome_options.add_argument('--disable-logging')  # Disable JavaScript frontend logs
+
+            # Set Chrome log level to silent
+            chrome_service = ChromeService(ChromeDriverManager().install())
+            chrome_service.silent = True  # Set silent to True to disable logging
 
             # Create an instance of Chrome browser
-            driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                                      options=chrome_options)
+            driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+
             # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
             # driver.implicitly_wait(5)
 

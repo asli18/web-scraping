@@ -82,9 +82,9 @@ def calculate_profitable_price(cost) -> int:
     return selling_price
 
 
-def chrome_driver(max_retry=3, retry_delay=2) -> webdriver:
-    attempts = 0
-    while attempts < max_retry:
+def chrome_driver(max_retry=3, retry_delay_sec=2) -> webdriver:
+    attempts = 1
+    while attempts <= max_retry:
         try:
             # Set Chrome browser options
             chrome_options = Options()
@@ -103,10 +103,11 @@ def chrome_driver(max_retry=3, retry_delay=2) -> webdriver:
             # driver.implicitly_wait(5)
 
             return driver
-        except WebDriverException as e:
+        except (WebDriverException, requests.exceptions.ConnectionError) as e:
+            print(f"Error: {e}. attempt {attempts}/{max_retry}, retrying...")
+            time.sleep(retry_delay_sec)
+        finally:
             attempts += 1
-            print(f"Error: {e}. Retrying... Attempt {attempts}/{max_retry}")
-            time.sleep(retry_delay)
 
     raise Exception(f"Failed to create Chrome WebDriver after {max_retry} attempts.")
 

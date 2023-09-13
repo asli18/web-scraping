@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import shutil
-import sys
 import time
 import urllib.parse
 
@@ -12,9 +11,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
-import common
-import image_editor
-from store_info import OutputInfo, ProductInfo
+from scraper import common
+from scraper import image_editor
+from scraper.store.store_info import OutputInfo, ProductInfo
 
 
 def gen_store_sale_url(brand: str, category: str = "") -> str:
@@ -228,7 +227,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_p
         product_info_processor(driver.page_source, output_info)
 
 
-def web_scraper(url: str) -> None | bool:
+def web_scraper(url: str, root_dir: str, font_path: str) -> None | bool:
     if common.check_url_validity(url) is False:
         return False
 
@@ -243,17 +242,7 @@ def web_scraper(url: str) -> None | bool:
     section = get_brand_name_from_url(url)
     print(f"Section: {section}")
 
-    if getattr(sys, 'frozen', False):
-        app_dir = os.path.dirname(sys.executable)  # pyinstaller executable
-    else:
-        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
-
-    font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
-    if not os.path.exists(font_path):
-        print(f"Font file not found: {font_path}")
-        return False
-
-    folder_path = os.path.join(app_dir, "output", store_name, section)
+    folder_path = os.path.join(root_dir, "output", store_name, section)
 
     # Clean up the old output directory
     if os.path.exists(folder_path):

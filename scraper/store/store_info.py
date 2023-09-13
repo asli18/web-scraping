@@ -7,11 +7,14 @@ import attr
 
 
 class StoreWebScraper:
-    def __init__(self, web_scraper_func: Callable[[str], None]):
+    def __init__(self, web_scraper_func: Callable[[str, str, str], None],
+                 root_dir: str, font_path: str):
         self.__web_scraper = web_scraper_func
+        self.root_dir = root_dir
+        self.font_path = font_path
 
     def execute_scraper(self, url: str):
-        return self.__web_scraper(url)
+        return self.__web_scraper(url, self.root_dir, self.font_path)
 
 
 @attr.s(slots=True, frozen=True, repr=False, eq=False, hash=False)

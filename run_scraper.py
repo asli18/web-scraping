@@ -5,14 +5,16 @@ import time
 
 import psutil
 
-import cettire_store
-import common
-import supply_store
-import upthere_store
-from store_info import StoreWebScraper
+from scraper import common
+from scraper.store import cettire_store
+from scraper.store import supply_store
+from scraper.store import upthere_store
+from scraper.store.store_info import StoreWebScraper
 
 
-def scrape_upthere_store() -> None:
+def scrape_upthere_store(root_dir: str, font_path: str) -> None:
+    upthere_scraper = StoreWebScraper(upthere_store.web_scraper, root_dir, font_path)
+
     brands = [
         "Needles",
         "beams-plus",
@@ -62,11 +64,14 @@ def scrape_upthere_store() -> None:
         upthere_scraper.execute_scraper(upthere_store.gen_store_sale_url(brand))
 
 
-def scrape_supply_store() -> None:
+def scrape_supply_store(root_dir: str, font_path: str) -> None:
+    supply_scraper = StoreWebScraper(supply_store.web_scraper, root_dir, font_path)
     supply_scraper.execute_scraper("https://www.supplystore.com.au/sale")
 
 
-def scrape_cettire_store() -> None:
+def scrape_cettire_store(root_dir: str, font_path: str) -> None:
+    cettire_scraper = StoreWebScraper(cettire_store.web_scraper, root_dir, font_path)
+
     category_bag = "Bags"
     category_accessories = "Accessories"
 
@@ -114,27 +119,40 @@ def scrape_cettire_store() -> None:
 
 
 def main() -> None:
+    if getattr(sys, 'frozen', False):
+        root_dir = os.path.dirname(sys.executable)  # pyinstaller executable
+    else:
+        root_dir = os.path.dirname(os.path.abspath(__file__))  # Python3 script
+
+    font_name = "SourceSerifPro-SemiBold.ttf"
+    font_path_candidates = [
+        os.path.join(root_dir, font_name),
+        os.path.join(root_dir, "fonts", font_name),
+    ]
+    for font_path in font_path_candidates:
+        if os.path.exists(font_path):
+            print(f"Font file found: {font_path}")
+            break
+    else:
+        print(f"Font file not found: {font_path_candidates}")
+        return
+
     try:
         aud_exchange_rate = common.get_aud_exchange_rate()
-
     except Exception as e:
         print(f"Error occurred during get_aud_exchange_rate(): {e}")
         print("Unable to find the exchange rate for Australian Dollar (AUD)")
         return
 
     print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")
-    scrape_upthere_store()
-    scrape_supply_store()
-    scrape_cettire_store()
+    scrape_upthere_store(root_dir, font_path)
+    scrape_supply_store(root_dir, font_path)
+    scrape_cettire_store(root_dir, font_path)
 
 
 if __name__ == '__main__':
     process = psutil.Process(os.getpid())
     before_memory = process.memory_info().rss
-
-    upthere_scraper = StoreWebScraper(upthere_store.web_scraper)
-    supply_scraper = StoreWebScraper(supply_store.web_scraper)
-    cettire_scraper = StoreWebScraper(cettire_store.web_scraper)
 
     start_time = time.perf_counter()
 

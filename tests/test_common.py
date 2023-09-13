@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 import os
-import sys
 
 import pytest
 from PIL import Image
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import common
+from scraper import common
 
 
 @pytest.mark.parametrize("expected_result, input_sec", [

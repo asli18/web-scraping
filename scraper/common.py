@@ -12,10 +12,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
-from exceptions import InvalidInputError
+from scraper.exceptions import InvalidInputError
 
 
-# Helper function to convert seconds to days, hours, minutes, and seconds
 def convert_seconds_to_time(sec):
     try:
         duration = timedelta(seconds=sec)
@@ -112,7 +111,6 @@ def chrome_driver(max_retry=3, retry_delay=2) -> webdriver:
     raise Exception(f"Failed to create Chrome WebDriver after {max_retry} attempts.")
 
 
-# Helper function to check the validity of a URL
 def check_url_validity(url: str) -> bool:
     try:
         response = requests.head(url)
@@ -126,7 +124,6 @@ def check_url_validity(url: str) -> bool:
         return False
 
 
-# Helper function to download a image
 def download_image_from_url(url, output_path):
     if not isinstance(output_path, str) or not output_path:
         raise InvalidInputError(

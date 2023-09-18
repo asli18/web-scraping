@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 import math
 import os
-import time
 from datetime import timedelta
+from time import sleep
 
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+from requests.exceptions import RequestException, HTTPError
+from urllib3.exceptions import IncompleteRead
 
 from scraper.exceptions import InvalidInputError
 
@@ -82,36 +79,6 @@ def calculate_profitable_price(cost) -> int:
     return selling_price
 
 
-def chrome_driver(max_retry=3, retry_delay_sec=2) -> webdriver:
-    attempts = 1
-    while attempts <= max_retry:
-        try:
-            # Set Chrome browser options
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
-            chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
-            chrome_options.add_argument('--disable-logging')  # Disable JavaScript frontend logs
-
-            # Set Chrome log level to silent
-            chrome_service = ChromeService(ChromeDriverManager().install())
-            chrome_service.silent = True  # Set silent to True to disable logging
-
-            # Create an instance of Chrome browser
-            driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-
-            # Wait for up to 5 seconds for the element to appear, throw an exception if not found.
-            # driver.implicitly_wait(5)
-
-            return driver
-        except (WebDriverException, requests.exceptions.ConnectionError) as e:
-            print(f"Error: {e}. attempt {attempts}/{max_retry}, retrying...")
-            time.sleep(retry_delay_sec)
-        finally:
-            attempts += 1
-
-    raise Exception(f"Failed to create Chrome WebDriver after {max_retry} attempts.")
-
-
 def check_url_validity(url: str) -> bool:
     try:
         response = requests.head(url)
@@ -125,7 +92,7 @@ def check_url_validity(url: str) -> bool:
         return False
 
 
-def download_image_from_url(url, output_path):
+def download_image_from_url(url, output_path, max_retries=3, retry_delay_sec=3):
     if not isinstance(output_path, str) or not output_path:
         raise InvalidInputError(
             f"Invalid output_path parameter: '{output_path}' "
@@ -137,26 +104,36 @@ def download_image_from_url(url, output_path):
             f"Invalid url parameter: '{url}' in function '{download_image_from_url.__name__}'"
         )
 
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Verify download success, raise exception on error.
+    for retry in range(max_retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Verify download success, raise exception on error.
 
-        print(f"Image download to path: {output_path}")
-        with open(output_path, "wb") as file:
-            file.write(response.content)
-        print("Image download completed")
+            print(f"Image download to path: {output_path}")
+            with open(output_path, "wb") as file:
+                file.write(response.content)
+            print("Image download completed")
+            return  # Download successful, exit the loop
 
-    except requests.HTTPError as e:
-        print(f"HTTP Error: {e}")
-        raise e
+        except IncompleteRead as e:
+            print(f"IncompleteRead Error: {e}")
+            print(f"Retrying download ({retry + 1}/{max_retries})...")
+            sleep(retry_delay_sec)
 
-    except requests.RequestException as e:
-        print(f"Error occurred while downloading the image: {e}")
-        raise e
+        except HTTPError as e:
+            print(f"HTTP Error: {e}")
+            raise e
 
-    except Exception as e:
-        print(f"Unknown error: {e}")
-        raise e
+        except RequestException as e:
+            print(f"Request Error: {e}")
+            raise e
+
+        except Exception as e:
+            print(f"Unknown error: {e}")
+            raise e
+
+    else:
+        print(f"Download failed after {max_retries} retries")
 
 
 def abort_scraping_msg(url: str) -> str:

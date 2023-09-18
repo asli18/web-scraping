@@ -5,16 +5,19 @@ from typing import Callable
 
 import attr
 
+from scraper.chrome_driver import ChromeDriver
+
 
 class StoreWebScraper:
-    def __init__(self, web_scraper_func: Callable[[str, str, str], None],
-                 root_dir: str, font_path: str):
+    def __init__(self, web_scraper_func: Callable[[ChromeDriver, str, str, str], None],
+                 chrome_driver: ChromeDriver, root_dir: str, font_path: str):
         self.__web_scraper = web_scraper_func
+        self.chrome_driver = chrome_driver
         self.root_dir = root_dir
         self.font_path = font_path
 
     def execute_scraper(self, url: str):
-        return self.__web_scraper(url, self.root_dir, self.font_path)
+        return self.__web_scraper(self.chrome_driver, url, self.root_dir, self.font_path)
 
 
 @attr.s(slots=True, frozen=True, repr=False, eq=False, hash=False)

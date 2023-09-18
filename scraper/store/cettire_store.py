@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
+from scraper.chrome_driver import ChromeDriver
 from scraper.store.store_info import OutputInfo, ProductInfo
 
 
@@ -227,7 +228,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_p
         product_info_processor(driver.page_source, output_info)
 
 
-def web_scraper(url: str, root_dir: str, font_path: str) -> None | bool:
+def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path: str) -> None | bool:
     if common.check_url_validity(url) is False:
         return False
 
@@ -259,7 +260,7 @@ def web_scraper(url: str, root_dir: str, font_path: str) -> None | bool:
                              font_path=font_path, image_background_color=product_image_bg_color)
     output_info.display_info()
 
-    driver = common.chrome_driver()
+    driver = chrome_driver.create()
 
     try:
         driver.get(url)

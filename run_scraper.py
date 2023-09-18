@@ -2,19 +2,23 @@
 import os
 import sys
 import time
+from multiprocessing import Pool
 
 import psutil
 
 from scraper import common
+from scraper.chrome_driver import ChromeDriver
 from scraper.store import cettire_store
 from scraper.store import supply_store
 from scraper.store import upthere_store
 from scraper.store.store_info import StoreWebScraper
 
 
-def scrape_upthere_store(root_dir: str, font_path: str) -> None:
-    upthere_scraper = StoreWebScraper(upthere_store.web_scraper, root_dir, font_path)
-
+def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
+                         root_dir: str, font_path: str) -> None:
+    upthere_scraper = StoreWebScraper(upthere_store.web_scraper, chrome_driver,
+                                      root_dir, font_path)
+    brands_url = []
     brands = [
         "Needles",
         "beams-plus",
@@ -61,27 +65,46 @@ def scrape_upthere_store(root_dir: str, font_path: str) -> None:
     ]
 
     for brand in brands:
-        upthere_scraper.execute_scraper(upthere_store.gen_store_sale_url(brand))
+        brands_url.append(upthere_store.gen_store_sale_url(brand))
+
+    if enable_multiprocessing:
+        with Pool() as pool:
+            for result in pool.imap(upthere_scraper.execute_scraper, brands_url):
+                pass
+    else:
+        for url in brands_url:
+            upthere_scraper.execute_scraper(url)
 
 
-def scrape_supply_store(root_dir: str, font_path: str) -> None:
-    supply_scraper = StoreWebScraper(supply_store.web_scraper, root_dir, font_path)
-    supply_scraper.execute_scraper("https://www.supplystore.com.au/sale")
+def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
+                        root_dir: str, font_path: str) -> None:
+    supply_scraper = StoreWebScraper(supply_store.web_scraper, chrome_driver,
+                                     root_dir, font_path)
+    brands_url = [
+        "https://www.supplystore.com.au/sale",
+    ]
+
+    if enable_multiprocessing:
+        with Pool() as pool:
+            for result in pool.imap(supply_scraper.execute_scraper, brands_url):
+                pass
+    else:
+        for url in brands_url:
+            supply_scraper.execute_scraper(url)
 
 
-def scrape_cettire_store(root_dir: str, font_path: str) -> None:
-    cettire_scraper = StoreWebScraper(cettire_store.web_scraper, root_dir, font_path)
-
-    category_bag = "Bags"
-    category_accessories = "Accessories"
+def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
+                         root_dir: str, font_path: str) -> None:
+    cettire_scraper = StoreWebScraper(cettire_store.web_scraper, chrome_driver,
+                                      root_dir, font_path)
 
     # All category of products
-    cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Common Projects"))
-    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island"))
-    # cettire_scraper.execute_scraper(cettire_store.gen_store_sale_url("Stone Island Shadow Project"))
-
-    # Bags
-    brands = [
+    brands_url = [
+        cettire_store.gen_store_sale_url("Common Projects"),
+        # cettire_store.gen_store_sale_url("Stone Island"),
+        # cettire_store.gen_store_sale_url("Stone Island Shadow Project"),
+    ]
+    bag_brands = [
         "A.P.C.",
         "Balenciaga",
         "Jil Sander",
@@ -91,13 +114,7 @@ def scrape_cettire_store(root_dir: str, font_path: str) -> None:
         "MM6 Maison Margiela",
         "Prada",
     ]
-
-    for brand in brands:
-        cettire_scraper.execute_scraper(
-            cettire_store.gen_store_sale_url(brand, category_bag))
-
-    # Accessories
-    brands = [
+    accessory_brands = [
         "A.P.C.",
         "Balenciaga",
         "Comme des Garçons Wallet",
@@ -112,10 +129,22 @@ def scrape_cettire_store(root_dir: str, font_path: str) -> None:
         "Thom Browne",
         "Tom Ford",
     ]
+    category_bag = "Bags"
+    category_accessories = "Accessories"
 
-    for brand in brands:
-        cettire_scraper.execute_scraper(
-            cettire_store.gen_store_sale_url(brand, category_accessories))
+    for brand in bag_brands:
+        brands_url.append(cettire_store.gen_store_sale_url(brand, category_bag))
+
+    for brand in accessory_brands:
+        brands_url.append(cettire_store.gen_store_sale_url(brand, category_accessories))
+
+    if enable_multiprocessing:
+        with Pool() as pool:
+            for result in pool.imap(cettire_scraper.execute_scraper, brands_url):
+                pass
+    else:
+        for url in brands_url:
+            cettire_scraper.execute_scraper(url)
 
 
 def main() -> None:
@@ -145,9 +174,15 @@ def main() -> None:
         return
 
     print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")
-    scrape_upthere_store(root_dir, font_path)
-    scrape_supply_store(root_dir, font_path)
-    scrape_cettire_store(root_dir, font_path)
+
+    chrome_driver = ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache"))
+
+    enable_multiprocessing = True
+    scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+    scrape_supply_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+    scrape_cettire_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+
+    chrome_driver.cleanup()
 
 
 if __name__ == '__main__':

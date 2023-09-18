@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import platform
 import sys
 import time
 from multiprocessing import Pool
@@ -196,8 +197,10 @@ if __name__ == '__main__':
     end_time = time.perf_counter()
     execution_time = end_time - start_time
 
-    memory_peak = process.memory_info().peak_wset / 1024 / 1024  # MB
-    print(f"Memory peak: {memory_peak} MB")
+    os_name = platform.system()
+    if os_name == "Windows":
+        memory_peak = process.memory_info().peak_wset / 1024 / 1024  # MB
+        print(f"Memory peak: {memory_peak} MB")
 
     after_memory = process.memory_info().rss
     memory_used = (after_memory - before_memory) / 1024 / 1024  # MB

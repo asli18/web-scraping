@@ -82,7 +82,14 @@ def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDrive
     supply_scraper = StoreWebScraper(supply_store.web_scraper, chrome_driver,
                                      root_dir, font_path)
     brands_url = [
-        "https://www.supplystore.com.au/sale",
+        "https://www.supplystore.com.au/sale/tops",
+        "https://www.supplystore.com.au/sale/bottoms",
+        "https://www.supplystore.com.au/sale/t-shirts",
+        "https://www.supplystore.com.au/sale/sweats",
+        "https://www.supplystore.com.au/sale/sale-jackets",
+        "https://www.supplystore.com.au/sale/sale-shirts",
+        "https://www.supplystore.com.au/sale/accessories",
+        "https://www.supplystore.com.au/sale/footwear",
     ]
 
     if enable_multiprocessing:

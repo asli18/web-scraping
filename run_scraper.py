@@ -167,15 +167,6 @@ def main() -> None:
         print(f"Font file not found: {font_path_candidates}")
         return
 
-    try:
-        aud_exchange_rate = common.get_aud_exchange_rate()
-    except Exception as e:
-        print(f"Error occurred during get_aud_exchange_rate(): {e}")
-        print("Unable to find the exchange rate for Australian Dollar (AUD)")
-        return
-
-    print(f"Spot selling rate for Australian Dollar (AUD): {aud_exchange_rate}")
-
     chrome_driver = ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache"))
 
     enable_multiprocessing = True

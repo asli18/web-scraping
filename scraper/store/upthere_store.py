@@ -32,7 +32,7 @@ def product_price_parser(price_string: str) -> int | None:
     return None
 
 
-def product_info_processor(page_source, output_info: OutputInfo):
+def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: float):
     soup = BeautifulSoup(page_source, 'html.parser')
 
     # find <section class="product-grid">
@@ -68,7 +68,7 @@ def product_info_processor(page_source, output_info: OutputInfo):
             image_urls.append(image_url)
 
         margin = 1.03
-        aud_twd = common.get_aud_exchange_rate() * margin
+        aud_twd = exchange_rate * margin
 
         # Parse price string to int
         original_price = round(product_price_parser(original_price) * aud_twd)
@@ -167,16 +167,17 @@ def wait_for_page_load(driver: webdriver, timeout=5):
             raise
 
 
-def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
+def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
+                   exchange_rate: float, total_pages: int):
     driver.get(url)
     wait_for_page_load(driver)
-    product_info_processor(driver.page_source, output_info)
+    product_info_processor(driver.page_source, output_info, exchange_rate)
 
     for page in range(2, total_pages + 1):
         new_url = url + f"?page={page}"
         driver.get(new_url)
         wait_for_page_load(driver)
-        product_info_processor(driver.page_source, output_info)
+        product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
 def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path: str) -> None | bool:
@@ -191,6 +192,16 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
         return False
 
     print("-------------------------- [ Start scraping ] --------------------------")
+
+    try:
+        exchange_rate = common.get_aud_exchange_rate()
+    except Exception as e:
+        print(f"Error occurred during get_aud_exchange_rate(): {e}")
+        print("Unable to find the exchange rate for Australian Dollar (AUD)")
+        return False
+
+    print(f"Spot selling rate for Australian Dollar (AUD): {exchange_rate}")
+
     section = url.split("/")[-1]
     print(f"Section: {section}")
 
@@ -235,7 +246,7 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
             common.save_html_to_file(html_content, "error_page_source.html")
             raise StaleElementReferenceException
 
-        start_scraping(driver, url, output_info, total_pages)
+        start_scraping(driver, url, output_info, exchange_rate, total_pages)
 
         print()
         print(f"Total pages: {total_pages}")

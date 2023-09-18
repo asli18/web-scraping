@@ -67,7 +67,7 @@ def product_price_parser(price_string: str) -> int | None:
     return None
 
 
-def product_info_processor(page_source, output_info: OutputInfo):
+def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: float):
     try:
         soup = BeautifulSoup(page_source, 'html.parser')
 
@@ -124,8 +124,8 @@ def product_info_processor(page_source, output_info: OutputInfo):
             original_price = sale_price  # Regular Price not found
 
         # Parse price string to int
-        original_price = product_price_parser(original_price)
-        sale_price = product_price_parser(sale_price)
+        original_price = round(product_price_parser(original_price) * exchange_rate)
+        sale_price = round(product_price_parser(sale_price) * exchange_rate)
 
         shipping_fee = 700 if sale_price < 7000 else 0
         cost = sale_price + shipping_fee
@@ -212,10 +212,11 @@ def wait_for_page_load(driver: webdriver, timeout=5):
             raise
 
 
-def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_pages: int):
+def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
+                   exchange_rate: float, total_pages: int):
     driver.get(url)
     wait_for_page_load(driver)
-    product_info_processor(driver.page_source, output_info)
+    product_info_processor(driver.page_source, output_info, exchange_rate)
 
     for page in range(2, total_pages + 1):
         if '?' in url:
@@ -225,7 +226,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo, total_p
 
         driver.get(new_url)
         wait_for_page_load(driver)
-        product_info_processor(driver.page_source, output_info)
+        product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
 def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path: str) -> None | bool:
@@ -240,6 +241,9 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
         return False
 
     print("-------------------------- [ Start scraping ] --------------------------")
+
+    exchange_rate = 1
+
     section = get_brand_name_from_url(url)
     print(f"Section: {section}")
 
@@ -280,7 +284,7 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
         else:
             total_pages = 1
 
-        start_scraping(driver, url, output_info, total_pages)
+        start_scraping(driver, url, output_info, exchange_rate, total_pages)
 
         print()
         print(f"Total pages: {total_pages}")

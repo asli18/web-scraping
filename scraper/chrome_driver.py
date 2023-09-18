@@ -14,7 +14,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 @attr.s(slots=True, frozen=True, repr=False, eq=False, hash=False)
 class ChromeDriver:
-    cache_dir: str = attr.ib(default="")
+    cache_dir: str = attr.ib(default="chrome_cache")
 
     def initial(self):
         ChromeDriverManager().install()

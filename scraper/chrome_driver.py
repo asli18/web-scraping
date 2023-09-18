@@ -18,7 +18,7 @@ class ChromeDriver:
 
     def initial(self):
         ChromeDriverManager().install()
-        if os.path.exists(self.cache_dir):
+        if not os.path.exists(self.cache_dir):
             os.mkdir(self.cache_dir)
 
     def cleanup(self):

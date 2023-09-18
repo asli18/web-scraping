@@ -175,6 +175,7 @@ def main() -> None:
         return
 
     chrome_driver = ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache"))
+    chrome_driver.initial()
 
     enable_multiprocessing = True
     scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)

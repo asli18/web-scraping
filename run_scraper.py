@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import platform
 import sys
@@ -155,11 +156,12 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
             cettire_scraper.execute_scraper(url)
 
 
-def main() -> None:
-    if getattr(sys, 'frozen', False):
-        root_dir = os.path.dirname(sys.executable)  # pyinstaller executable
-    else:
-        root_dir = os.path.dirname(os.path.abspath(__file__))  # Python3 script
+def main(root_dir=None) -> None:
+    if root_dir is None:
+        if getattr(sys, 'frozen', False):
+            root_dir = os.path.dirname(sys.executable)  # pyinstaller executable
+        else:
+            root_dir = os.path.dirname(os.path.abspath(__file__))  # Python3 script
 
     font_name = "SourceSerifPro-SemiBold.ttf"
     font_path_candidates = [
@@ -191,7 +193,10 @@ if __name__ == '__main__':
 
     start_time = time.perf_counter()
 
-    main()
+    parser = argparse.ArgumentParser(description='Web scraping tool for online stores')
+    parser.add_argument('root_dir', nargs='?', default=None, help='Root directory path')
+    args = parser.parse_args()
+    main(args.root_dir)
 
     end_time = time.perf_counter()
     execution_time = end_time - start_time

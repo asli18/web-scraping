@@ -51,7 +51,7 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
         brand = container \
             .find('div', class_='product__subtitle') \
             .find('span').contents[0].strip().split('\n')[0]
-        title = container.find('div', class_='product__title').text.strip()
+        title = container.find('div', class_='product__title').text.strip().replace('"', "'")
         original_price = container.find('del', class_='price__amount').text.strip()
         sale_price = container.find('ins', class_='price__amount').text.strip()
         # print(f"No.{idx}: {title}")

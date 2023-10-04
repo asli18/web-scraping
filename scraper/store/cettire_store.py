@@ -101,7 +101,7 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
         # Find the title
         title_element = element.find('div', class_='_1EqhXd6FUIED0ndyLYSncV')
         try:
-            title = title_element.text.strip()
+            title = title_element.text.strip().replace('"', "'")
             if brand in title:
                 title = title.replace(brand, "").strip()
         except (AttributeError, TypeError):

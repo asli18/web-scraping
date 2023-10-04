@@ -51,7 +51,7 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
         # Find the title and link
         title_element = subtitle.find('div', class_='product-item-name')
         try:
-            title = title_element.text.strip()
+            title = title_element.text.strip().replace('"', "'")
             if brand in title:
                 title = title.replace(brand, "").strip()
 

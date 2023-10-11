@@ -5,6 +5,7 @@ import time
 import urllib.parse
 
 from bs4 import BeautifulSoup
+from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -13,7 +14,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
-from scraper.chrome_driver import ChromeDriver
+from scraper.exceptions import ElementNotFound, InvalidInputError
+from scraper.image_editor import ImageProcessingError
 from scraper.store.store_info import OutputInfo, ProductInfo
 
 
@@ -68,14 +70,14 @@ def product_price_parser(price_string: str) -> int | None:
 
 
 def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: float):
-    try:
-        soup = BeautifulSoup(page_source, 'html.parser')
+    soup = BeautifulSoup(page_source, 'html.parser')
 
-        product_element_class = '_8T7q2GDqmgeWgJYhbInA1'
-        product_elements = soup.find_all('div', class_=product_element_class)
-    except Exception:
-        print("Product class pattern not found")
-        raise
+    product_element_class = '_8T7q2GDqmgeWgJYhbInA1'
+    product_elements = soup.find_all('div', class_=product_element_class)
+
+    if product_elements is None:
+        print("Product info not found")
+        raise ElementNotFound("Product info not found")
 
     for element in product_elements:
         anchor_element = element.find('a')
@@ -155,7 +157,8 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
                                                    product_info.image1_insert_text)
 
             product_info.product_info_logging(output_info.output_dir)
-        except Exception as e:
+        except (InvalidInputError, HTTPError, RequestException,
+                FileNotFoundError, OSError, ImageProcessingError) as e:
             print(f"Product image processing failed: {e}")
             raise
 
@@ -229,7 +232,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
         product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
-def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path: str) -> None | bool:
+def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> None | bool:
     if common.check_url_validity(url) is False:
         return False
 
@@ -264,12 +267,11 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
                              font_path=font_path, image_background_color=product_image_bg_color)
     output_info.display_info()
 
-    driver = chrome_driver.create()
+    result = True
 
     try:
         driver.get(url)
         wait_for_page_load(driver)
-
         page_source = driver.page_source
 
         # Find the pagination section on the webpage
@@ -290,15 +292,18 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
         print(f"Total pages: {total_pages}")
         print(f"Total valid products: {output_info.product_count}")
 
+    except TimeoutException:
+        print("Element waiting timeout error")
+        result = False
     except Exception as e:
         print(f"Unknown scraping error: {e}")
-        print(common.abort_scraping_msg(url))
-
+        result = False
     finally:
-        # close browser
-        driver.quit()
+        if not result:
+            print(common.abort_scraping_msg(url))
 
     if not output_info.product_count:
         common.delete_empty_folders(folder_path)
 
     print("------------------------------------------------------------------------\n")
+    return result

@@ -113,7 +113,7 @@ def download_image_from_url(url, output_path, max_retries=3, retry_delay_sec=3):
             with open(output_path, "wb") as file:
                 file.write(response.content)
             print("Image download completed")
-            return  # Download successful, exit the loop
+            return
 
         except IncompleteRead as e:
             print(f"IncompleteRead Error: {e}")
@@ -127,11 +127,6 @@ def download_image_from_url(url, output_path, max_retries=3, retry_delay_sec=3):
         except RequestException as e:
             print(f"Request Error: {e}")
             raise e
-
-        except Exception as e:
-            print(f"Unknown error: {e}")
-            raise e
-
     else:
         print(f"Download failed after {max_retries} retries")
 

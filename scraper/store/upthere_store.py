@@ -5,6 +5,7 @@ import time
 import urllib.parse
 
 from bs4 import BeautifulSoup
+from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
@@ -14,8 +15,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
-from scraper.chrome_driver import ChromeDriver
-from scraper.exceptions import ElementNotFound
+from scraper.exceptions import ElementNotFound, InvalidInputError
+from scraper.image_editor import ImageProcessingError
 from scraper.store.store_info import OutputInfo, ProductInfo
 
 
@@ -41,9 +42,9 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
         .find('section', class_='product-grid') \
         .find_all('a', class_=['product', 'product__swap'])
 
-    if not product_containers:
+    if product_containers is None:
         common.save_html_to_file(page_source, "fail_page_source.html")
-        raise ElementNotFound("Product pattern not found")
+        raise ElementNotFound("Product info not found")
 
     for idx, container in enumerate(product_containers, start=1):
         product_url = "https://uptherestore.com" + container['href']
@@ -104,7 +105,9 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
                                                    product_info.image1_insert_text)
 
             product_info.product_info_logging(output_info.output_dir)
-        except Exception as e:
+
+        except (InvalidInputError, HTTPError, RequestException,
+                FileNotFoundError, OSError, ImageProcessingError) as e:
             print(f"Product image processing failed: {e}")
             raise
 
@@ -162,10 +165,6 @@ def wait_for_page_load(driver: webdriver, timeout=5):
             # print(f"'product__subtitle' not found under 'product-grid', retry...")
             time.sleep(0.3)
 
-        except Exception as e:
-            print(f"Unknown error: {e}")
-            raise
-
 
 def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
                    exchange_rate: float, total_pages: int):
@@ -180,7 +179,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
         product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
-def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path: str) -> None | bool:
+def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> bool:
     if common.check_url_validity(url) is False:
         return False
 
@@ -222,7 +221,7 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
                              font_path=font_path, image_background_color=product_image_bg_color)
     output_info.display_info()
 
-    driver = chrome_driver.create()
+    result = True
 
     try:
         html_content = common.get_static_html_content(url)
@@ -254,21 +253,19 @@ def web_scraper(chrome_driver: ChromeDriver, url: str, root_dir: str, font_path:
 
     except (TimeoutException, NoSuchElementException):
         print("Element waiting timeout error")
-        print(common.abort_scraping_msg(url))
-
+        result = False
     except StaleElementReferenceException:
         print("Page elements are no longer valid")
-        print(common.abort_scraping_msg(url))
-
+        result = False
     except Exception as e:
         print(f"Unknown scraping error: {e}")
-        print(common.abort_scraping_msg(url))
-
+        result = False
     finally:
-        # close browser
-        driver.quit()
+        if not result:
+            print(common.abort_scraping_msg(url))
 
     if not output_info.product_count:
         common.delete_empty_folders(folder_path)
 
     print("------------------------------------------------------------------------\n")
+    return result

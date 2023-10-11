@@ -4,12 +4,13 @@ import os
 from typing import Callable
 
 import attr
+from selenium import webdriver
 
-from scraper.chrome_driver import ChromeDriver
+from scraper.chrome_driver import ChromeDriver, ChromeDriverError
 
 
 class StoreWebScraper:
-    def __init__(self, web_scraper_func: Callable[[ChromeDriver, str, str, str], None],
+    def __init__(self, web_scraper_func: Callable[[webdriver, str, str, str], None],
                  chrome_driver: ChromeDriver, root_dir: str, font_path: str):
         self.__web_scraper = web_scraper_func
         self.chrome_driver = chrome_driver
@@ -17,7 +18,20 @@ class StoreWebScraper:
         self.font_path = font_path
 
     def execute_scraper(self, url: str):
-        return self.__web_scraper(self.chrome_driver, url, self.root_dir, self.font_path)
+        try:
+            driver = self.chrome_driver.create()
+            return self.__web_scraper(driver, url, self.root_dir, self.font_path)
+        except ChromeDriverError as e:
+            print(f"ChromeDriverError: {e}")
+            return False
+        except TimeoutError:
+            print("TimeoutError: Connection timed out. Retrying or taking other actions.")
+            return False
+        except KeyboardInterrupt:
+            print("Received KeyboardInterrupt, exit scraper")
+            return False
+        finally:
+            self.chrome_driver.quit()
 
 
 @attr.s(slots=True, frozen=True, repr=False, eq=False, hash=False)
@@ -82,8 +96,11 @@ class ProductInfo:
             logger.info(f"Photo 2 URL:    {self.image2_src}")
             logger.info(f"Product URL:    {self.product_url}")
             logger.info("")
-        except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
+
+        except FileNotFoundError as e:
+            logger.error(f"File not found: {str(e)}")
+        except PermissionError as e:
+            logger.error(f"Permission error: {str(e)}")
         finally:
             if file_handler is not None:
                 file_handler.close()

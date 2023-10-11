@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import atexit
 import os
 import platform
 import sys
@@ -24,7 +25,6 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     brands = [
         "Needles",
         "beams-plus",
-        "orSlow",
         "Norse-Projects",
         "Norse-Projects-Arktisk",
         "Engineered-Garments",
@@ -47,16 +47,14 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         "4SDesigns",
         "Medicom-Toy",
         "Lite-Year",
-        "Kapital",
         "Objects-IV-Life",
         "Satta",
         "Adsum",
-        "Arcteryx",
-        "Arcteryx-Veilance",
+        # "Arcteryx",
+        # "Arcteryx-Veilance",
 
         # Eyewear
         "Monokel-Eyewear",
-        "Sub-Sun",
         "AHLEM",
 
         # Accessories
@@ -69,13 +67,17 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     for brand in brands:
         brands_url.append(upthere_store.gen_store_sale_url(brand))
 
-    if enable_multiprocessing:
-        with Pool() as pool:
-            for result in pool.imap(upthere_scraper.execute_scraper, brands_url):
-                pass
-    else:
-        for url in brands_url:
-            upthere_scraper.execute_scraper(url)
+    try:
+        if enable_multiprocessing:
+            with Pool() as pool:
+                for result in pool.imap(upthere_scraper.execute_scraper, brands_url):
+                    pass
+        else:
+            for url in brands_url:
+                upthere_scraper.execute_scraper(url)
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, stop processing")
+        raise
 
 
 def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
@@ -93,13 +95,17 @@ def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDrive
         "https://www.supplystore.com.au/sale/footwear",
     ]
 
-    if enable_multiprocessing:
-        with Pool() as pool:
-            for result in pool.imap(supply_scraper.execute_scraper, brands_url):
-                pass
-    else:
-        for url in brands_url:
-            supply_scraper.execute_scraper(url)
+    try:
+        if enable_multiprocessing:
+            with Pool() as pool:
+                for result in pool.imap(supply_scraper.execute_scraper, brands_url):
+                    pass
+        else:
+            for url in brands_url:
+                supply_scraper.execute_scraper(url)
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, stop processing")
+        raise
 
 
 def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
@@ -147,13 +153,17 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     for brand in accessory_brands:
         brands_url.append(cettire_store.gen_store_sale_url(brand, category_accessories))
 
-    if enable_multiprocessing:
-        with Pool() as pool:
-            for result in pool.imap(cettire_scraper.execute_scraper, brands_url):
-                pass
-    else:
-        for url in brands_url:
-            cettire_scraper.execute_scraper(url)
+    try:
+        if enable_multiprocessing:
+            with Pool() as pool:
+                for result in pool.imap(cettire_scraper.execute_scraper, brands_url):
+                    pass
+        else:
+            for url in brands_url:
+                cettire_scraper.execute_scraper(url)
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, stop processing")
+        raise
 
 
 def main(root_dir=None) -> None:
@@ -176,15 +186,13 @@ def main(root_dir=None) -> None:
         print(f"Font file not found: {font_path_candidates}")
         return
 
-    chrome_driver = ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache"))
-    chrome_driver.initial()
-
+    atexit.register(ChromeDriver.terminate_chromedriver_orphans)
     enable_multiprocessing = True
-    scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
-    scrape_supply_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
-    scrape_cettire_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
 
-    chrome_driver.cleanup()
+    with ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache")) as chrome_driver:
+        scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+        scrape_supply_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+        scrape_cettire_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
 
 
 if __name__ == '__main__':
@@ -196,7 +204,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Web scraping tool for online stores')
     parser.add_argument('root_dir', nargs='?', default=None, help='Root directory path')
     args = parser.parse_args()
-    main(args.root_dir)
+
+    try:
+        main(args.root_dir)
+    except KeyboardInterrupt:
+        print("Exiting main process due to KeyboardInterrupt")
+    except Exception as e:
+        print(f"Unknown error: {e}")
 
     end_time = time.perf_counter()
     execution_time = end_time - start_time

@@ -125,10 +125,8 @@ def expand_and_center_image(image_path, output_path, new_size, background_color=
             # Save the new image
             new_image.save(output_path, dpi=dpi)
 
-    except (FileNotFoundError, OSError):
-        raise ImageProcessingError(f"Invalid image path: {image_path}")
     except FileNotFoundError:
-        raise ImageProcessingError(f"Image not found: {image_path}")
+        raise ImageProcessingError(f"Invalid image path: {image_path}")
     except OSError as e:
         raise ImageProcessingError(f"Error processing image: {e}")
 
@@ -156,7 +154,7 @@ def resize_for_ig_story(input_file_path, image_background_color):
     try:
         expand_and_center_image(input_file_path, input_file_path, (new_width, new_height),
                                 image_background_color)
-    except Exception as e:
+    except (FileNotFoundError, OSError, ImageProcessingError) as e:
         print(f"Resize the image error: {e}")
         raise
 
@@ -176,7 +174,7 @@ def insert_text_to_ig_story(input_file_path, font_path, insert_text):
     try:
         add_text_to_image(input_file_path, input_file_path, font_path,
                           insert_text, text_size, text_position)
-    except Exception as e:
+    except (FileNotFoundError, ImageProcessingError) as e:
         print(f"Insert text to IG story image error:  {e}")
         raise
 

@@ -9,12 +9,13 @@ from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
+from scraper.chrome_driver import WebDriverAction
 from scraper.exceptions import ElementNotFound, InvalidInputError
 from scraper.image_editor import ImageProcessingError
 from scraper.store.store_info import OutputInfo, ProductInfo
@@ -112,18 +113,19 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
 
-def wait_for_page_load(driver: webdriver, timeout=5):
+def wait_for_page_load(driver: webdriver, timeout=10):
+    WebDriverAction.scroll_page_by_step(driver)
     # wait for the website to fully load
     try:
         WebDriverWait(driver, timeout).until(
-            ec.presence_of_element_located((
+            EC.presence_of_element_located((
                 By.XPATH,
                 "//div[contains(@class, 'cell') \
                     and contains(@class, 'boost-pfs-action-list-enabled') \
                     and not(contains(@class, 'live'))]")))
 
         WebDriverWait(driver, timeout).until(
-            ec.presence_of_element_located((
+            EC.presence_of_element_located((
                 By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")))
 
     except TimeoutException:
@@ -135,13 +137,13 @@ def wait_for_page_load(driver: webdriver, timeout=5):
         try:
             # Wait for the "product-grid" element to appear
             product_grid = WebDriverWait(driver, timeout).until(
-                ec.presence_of_element_located((By.CLASS_NAME, "product-grid")))
+                EC.presence_of_element_located((By.CLASS_NAME, "product-grid")))
 
             # Find the "product__subtitle" element under the "product-grid" element
             product_grid.find_element(By.CLASS_NAME, "product__subtitle")
 
             currency_select = WebDriverWait(driver, timeout).until(
-                ec.presence_of_element_located((By.CSS_SELECTOR, 'select[name="currency"]')))
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'select[name="currency"]')))
 
             currency_select = Select(currency_select)
             selected_option = currency_select.first_selected_option

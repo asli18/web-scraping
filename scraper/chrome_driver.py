@@ -66,6 +66,7 @@ class ChromeDriver:
                 chrome_service = ChromeService()
                 chrome_service.silent = True  # Set silent to True to disable logging
                 driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+                driver.implicitly_wait(20)
                 self.driver = driver
                 return driver
             except (WebDriverException, requests.exceptions.ConnectionError) as e:
@@ -89,3 +90,27 @@ class ChromeDriver:
                     print(f"Terminate 'chromedriver.exe' process tree with PID {proc.pid}")
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
+
+
+@attr.s(slots=True, frozen=True, repr=False, eq=False, hash=False)
+class WebDriverAction:
+
+    @staticmethod
+    def scroll_to_bottom(driver: webdriver, wait_time=1):
+        if driver is None:
+            return
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(wait_time)
+
+    @staticmethod
+    def scroll_page_by_step(driver: webdriver, scroll_step=1000, scroll_total=30, wait_time=1):
+        if driver is None:
+            return
+        current_scroll_position = 0
+        for _ in range(scroll_total):
+            driver.execute_script("window.scrollBy(0, {0});".format(scroll_step))
+            time.sleep(wait_time)
+            new_scroll_position = driver.execute_script("return window.scrollY;")
+            if new_scroll_position == current_scroll_position:
+                break
+            current_scroll_position = new_scroll_position

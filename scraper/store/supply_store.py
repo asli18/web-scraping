@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 import os
 import shutil
-import time
 
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
+from scraper.chrome_driver import WebDriverAction
 from scraper.exceptions import ElementNotFound, InvalidInputError
 from scraper.image_editor import ImageProcessingError
 from scraper.store.store_info import OutputInfo, ProductInfo
@@ -121,11 +121,12 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
 
-def wait_for_page_load(driver: webdriver, timeout=5):
+def wait_for_page_load(driver: webdriver, timeout=10):
+    WebDriverAction.scroll_page_by_step(driver)
     # wait for the website to fully load
     try:
         WebDriverWait(driver, timeout).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR, 'span.sr-only.label')))
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'span.sr-only.label')))
 
     except TimeoutException:
         print("Element waiting timed out, unable to locate the element.")
@@ -145,7 +146,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
         product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
-def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> None | bool:
+def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> bool:
     if common.check_url_validity(url) is False:
         return False
 

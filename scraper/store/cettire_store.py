@@ -9,11 +9,12 @@ from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from scraper import common
 from scraper import image_editor
+from scraper.chrome_driver import WebDriverAction
 from scraper.exceptions import ElementNotFound, InvalidInputError
 from scraper.image_editor import ImageProcessingError
 from scraper.store.store_info import OutputInfo, ProductInfo
@@ -163,7 +164,8 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
 
-def wait_for_page_load(driver: webdriver, timeout=5):
+def wait_for_page_load(driver: webdriver, timeout=10):
+    WebDriverAction.scroll_page_by_step(driver)
     # wait for the website to fully load
     start = time.time()
     while True:
@@ -174,11 +176,11 @@ def wait_for_page_load(driver: webdriver, timeout=5):
             # Wait for products
             product_element_class = "_8T7q2GDqmgeWgJYhbInA1"
             WebDriverWait(driver, timeout).until(
-                ec.presence_of_all_elements_located((By.CLASS_NAME, product_element_class)))
+                EC.presence_of_all_elements_located((By.CLASS_NAME, product_element_class)))
 
             # Wait for webpage footer
             footer = WebDriverWait(driver, timeout).until(
-                ec.presence_of_element_located((By.TAG_NAME, "footer")))
+                EC.presence_of_element_located((By.TAG_NAME, "footer")))
 
             pattern_to_check = "Download the CETTIRE App"
             if pattern_to_check in footer.text:
@@ -187,7 +189,7 @@ def wait_for_page_load(driver: webdriver, timeout=5):
                 # <div class="_1G4j5iHnSBb-ZZ_YNTiSDP">
                 #   <a href="https://apps.apple.com/app/cettire/id1607489142">
                 div_element = WebDriverWait(footer, timeout).until(
-                    ec.presence_of_element_located((By.CLASS_NAME, "_1G4j5iHnSBb-ZZ_YNTiSDP")))
+                    EC.presence_of_element_located((By.CLASS_NAME, "_1G4j5iHnSBb-ZZ_YNTiSDP")))
 
                 apple_href_value = div_element.find_element(By.TAG_NAME, "a").get_attribute("href")
 
@@ -196,7 +198,7 @@ def wait_for_page_load(driver: webdriver, timeout=5):
                 # <a class="_1-PLV2tu1YxtPyRZLO7LyG"
                 #    href="https://instagram.com/cettire" title="Cettire on Instagram">
                 a_element = WebDriverWait(footer, timeout).until(
-                    ec.presence_of_element_located((By.CLASS_NAME, "_1-PLV2tu1YxtPyRZLO7LyG")))
+                    EC.presence_of_element_located((By.CLASS_NAME, "_1-PLV2tu1YxtPyRZLO7LyG")))
 
                 ig_href_value = a_element.get_attribute("href")
                 ig_title_value = a_element.get_attribute("title")
@@ -232,7 +234,7 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
         product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
-def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> None | bool:
+def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> bool:
     if common.check_url_validity(url) is False:
         return False
 

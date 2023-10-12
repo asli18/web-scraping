@@ -10,7 +10,7 @@ from scraper.chrome_driver import ChromeDriver, ChromeDriverError
 
 
 class StoreWebScraper:
-    def __init__(self, web_scraper_func: Callable[[webdriver, str, str, str], None],
+    def __init__(self, web_scraper_func: Callable[[webdriver, str, str, str], bool],
                  chrome_driver: ChromeDriver, root_dir: str, font_path: str):
         self.__web_scraper = web_scraper_func
         self.chrome_driver = chrome_driver

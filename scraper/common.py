@@ -4,6 +4,7 @@ import os
 from datetime import timedelta
 from time import sleep
 
+import random
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import RequestException, HTTPError
@@ -24,12 +25,25 @@ def convert_seconds_to_time(sec):
         raise
 
 
+def get_random_user_agent():
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/118.0.0.0 Safari/537.36",
+
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Firefox/115.0.1 Safari/537.36",
+
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Edge/109.0.1518 Safari/537.36",
+    ]
+    return random.choice(user_agents)
+
+
 # Helper function to get the exchange rate for Australian Dollar (AUD) from Bank of Taiwan
 def get_aud_exchange_rate() -> float:
     url = "https://rate.bot.com.tw/xrt?Lang=en-US"
     try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(get_static_html_content(url), "html.parser")
 
         # Find the spot selling rate for Australian Dollar (AUD).
         currency_rows = soup.select("tbody tr")
@@ -45,8 +59,13 @@ def get_aud_exchange_rate() -> float:
 
 
 def get_static_html_content(url):
+    headers = {
+        "User-Agent": get_random_user_agent()
+    }
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
+        if not response.ok:
+            print("HTTP response status code:", response.status_code)
         response.raise_for_status()
         html_content = response.text
         return html_content

@@ -32,16 +32,9 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         "MHL.",
         "Nike",
         "Nike-ACG",
-        "Adidas",
-        "Jordan",
         "Hoka",
-        "Birkenstock",
-        "Asics",
         "Salomon",
-        "New-Balance",
-        "Malibu",
         "Viberg",
-        "Lusso-Cloud",
         "Nanamica",
         "Gramicci",
         "4SDesigns",
@@ -49,13 +42,11 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         "Lite-Year",
         "Objects-IV-Life",
         "Satta",
-        "Adsum",
         # "Arcteryx",
         # "Arcteryx-Veilance",
 
         # Eyewear
         "Monokel-Eyewear",
-        "AHLEM",
 
         # Accessories
         "Maple",

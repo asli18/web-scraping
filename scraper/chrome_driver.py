@@ -51,11 +51,12 @@ class ChromeDriver:
             self.driver.quit()
             self.driver = None
 
-    def create(self, max_retries=3, retry_delay_sec=3) -> webdriver:
+    def create(self, headless=True, max_retries=3, retry_delay_sec=3) -> webdriver:
         user_data_dir = os.path.join(self.cache_dir, f"pid_{os.getpid()}")
 
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
+        if headless is True:
+            chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
         chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
         chrome_options.add_argument('--disable-logging')  # Disable JavaScript frontend logs
         chrome_options.add_argument(f"--user-data-dir={user_data_dir}")

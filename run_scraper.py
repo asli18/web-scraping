@@ -14,6 +14,7 @@ from scraper.chrome_driver import ChromeDriver
 from scraper.store import cettire_store
 from scraper.store import supply_store
 from scraper.store import upthere_store
+from scraper.store import chemist_warehouse
 from scraper.store.store_info import StoreWebScraper
 
 
@@ -157,6 +158,23 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         raise
 
 
+def scrape_chemist_warehouse(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
+                             root_dir: str, font_path: str) -> None:
+    chemist_warehouse_scraper = StoreWebScraper(chemist_warehouse.web_scraper, chrome_driver,
+                                                root_dir, font_path, headless=False)
+    brands_url = [
+        "https://www.chemistwarehouse.com.au/"
+        "buy/122444/neutrogena-rapid-wrinkle-repair-retinol-pro-night-cream-48g",
+    ]
+
+    try:
+        for url in brands_url:
+            chemist_warehouse_scraper.execute_scraper(url)
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, stop processing")
+        raise
+
+
 def main(root_dir=None) -> None:
     if root_dir is None:
         if getattr(sys, 'frozen', False):
@@ -184,6 +202,7 @@ def main(root_dir=None) -> None:
         scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
         scrape_supply_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
         scrape_cettire_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
+        scrape_chemist_warehouse(enable_multiprocessing, chrome_driver, root_dir, font_path)
 
 
 if __name__ == '__main__':

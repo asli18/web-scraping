@@ -11,15 +11,16 @@ from scraper.chrome_driver import ChromeDriver, ChromeDriverError
 
 class StoreWebScraper:
     def __init__(self, web_scraper_func: Callable[[webdriver, str, str, str], bool],
-                 chrome_driver: ChromeDriver, root_dir: str, font_path: str):
+                 chrome_driver: ChromeDriver, root_dir: str, font_path: str, headless=True):
         self.__web_scraper = web_scraper_func
         self.chrome_driver = chrome_driver
         self.root_dir = root_dir
         self.font_path = font_path
+        self.headless = headless
 
     def execute_scraper(self, url: str):
         try:
-            driver = self.chrome_driver.create()
+            driver = self.chrome_driver.create(headless=self.headless)
             return self.__web_scraper(driver, url, self.root_dir, self.font_path)
         except ChromeDriverError as e:
             print(f"ChromeDriverError: {e}")

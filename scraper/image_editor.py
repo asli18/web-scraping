@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 
+import cv2
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -247,6 +249,34 @@ def create_ig_story_image_example(image_path: str, insert_text: str = "") -> Non
         print(f"Error occurred during image processing: {e}")
 
 
+def generate_gray_image(width=256, height=256) -> None:
+    gray_list = []
+
+    # Generate the grayscale values from 0 to 255
+    for y in range(height):
+        row = []
+        for x in range(width):
+            # Calculate the grayscale value based on the x and y positions
+            value = (y * width + x) % 256
+            row.append(value)
+        gray_list.append(row)
+
+    # Convert the 2D list to a NumPy array
+    gray_data = np.array(gray_list, dtype=np.uint8)
+
+    # Show grayscale image
+    cv2.imshow('Gray Image', gray_data)
+
+    key = cv2.waitKey(0)
+    if key == ord('s'):
+        image_name = "gray_image.png"
+        print(f"Save grayscale image: {image_name}")
+        cv2.imwrite(image_name, gray_data)
+
+    cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
     example()
     create_ig_story_image_example("./image_sample/lightning.jpg", "Lightning")
+    generate_gray_image()

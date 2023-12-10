@@ -107,31 +107,24 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
 
     # All category of products
     brands_url = [
-        cettire_store.gen_store_sale_url("Common Projects"),
-        # cettire_store.gen_store_sale_url("Stone Island"),
-        # cettire_store.gen_store_sale_url("Stone Island Shadow Project"),
+        cettire_store.gen_store_sale_url("Stone Island"),
+        cettire_store.gen_store_sale_url("Stone Island Shadow Project"),
     ]
     bag_brands = [
-        "A.P.C.",
+        "Loewe",
+        "Prada",
         "Balenciaga",
         "Jil Sander",
-        "Lemaire",
-        "Loewe",
         "Maison Margiela",
-        "MM6 Maison Margiela",
-        "Prada",
+        "Saint Laurent",
+        "Thom Browne",
     ]
     accessory_brands = [
-        "A.P.C.",
-        "Balenciaga",
-        "Comme des Garçons Wallet",
-        "Gucci",
-        "Jil Sander",
-        "Lemaire",
         "Loewe",
-        "Maison Margiela",
-        "MM6 Maison Margiela",
         "Prada",
+        "Balenciaga",
+        "Jil Sander",
+        "Maison Margiela",
         "Saint Laurent",
         "Thom Browne",
         "Tom Ford",

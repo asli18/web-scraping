@@ -113,7 +113,11 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     bag_brands = [
         "Loewe",
         "Prada",
+        "Fendi",
+        "MIU MIU",
+        "Burberry",
         "Balenciaga",
+        "Valentino",
         "Jil Sander",
         "Maison Margiela",
         "Saint Laurent",
@@ -122,7 +126,11 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     accessory_brands = [
         "Loewe",
         "Prada",
+        "Fendi",
+        "MIU MIU",
+        "Burberry",
         "Balenciaga",
+        "Valentino",
         "Jil Sander",
         "Maison Margiela",
         "Saint Laurent",

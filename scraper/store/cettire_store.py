@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import shutil
 import time
@@ -22,7 +21,10 @@ from scraper.store.store_info import OutputInfo, ProductInfo
 
 def gen_store_sale_url(brand: str, category: str = "") -> str:
     if brand:
-        url = "https://www.cettire.com/tw/collections/sale/" + urllib.parse.quote(brand)
+        url = (
+            "https://www.cettire.com/tw/collections/sale/"
+            + urllib.parse.quote(brand)
+        )
 
         if category:
             if category == "Bags" or category == "Accessories":
@@ -66,35 +68,37 @@ def get_brand_name_from_url(url):
 
 def product_price_parser(price_string: str) -> int | None:
     if price_string is not None:
-        return round(float(price_string.replace(',', '').replace('$', '')))
+        return round(float(price_string.replace(",", "").replace("$", "")))
     return None
 
 
-def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: float):
-    soup = BeautifulSoup(page_source, 'html.parser')
+def product_info_processor(
+    page_source, output_info: OutputInfo, exchange_rate: float
+):
+    soup = BeautifulSoup(page_source, "html.parser")
 
-    product_element_class = '_8T7q2GDqmgeWgJYhbInA1'
-    product_elements = soup.find_all('div', class_=product_element_class)
+    product_element_class = "_8T7q2GDqmgeWgJYhbInA1"
+    product_elements = soup.find_all("div", class_=product_element_class)
 
     if product_elements is None:
         print("Product info not found")
         raise ElementNotFound("Product info not found")
 
     for element in product_elements:
-        anchor_element = element.find('a')
-        product_url = "https://www.cettire.com" + anchor_element['href']
+        anchor_element = element.find("a")
+        product_url = "https://www.cettire.com" + anchor_element["href"]
 
         # Find the first image URL
         image_urls = []
-        image1_element = element.find('img', class_='_3P4L7mmfV3qp3D432lVyQu')
+        image1_element = element.find("img", class_="_3P4L7mmfV3qp3D432lVyQu")
         try:
-            image_urls.append(image1_element['src'])
+            image_urls.append(image1_element["src"])
         except (AttributeError, TypeError):
             print("Image source not found")
             raise
 
         # Find the brand
-        brand_element = element.find('div', class_='_1tt3LMOZ50TX6rWCuwNDjK')
+        brand_element = element.find("div", class_="_1tt3LMOZ50TX6rWCuwNDjK")
         try:
             brand = brand_element.text.strip()
         except (AttributeError, TypeError):
@@ -102,7 +106,7 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
         # Find the title
-        title_element = element.find('div', class_='_1EqhXd6FUIED0ndyLYSncV')
+        title_element = element.find("div", class_="_1EqhXd6FUIED0ndyLYSncV")
         try:
             title = title_element.text.strip().replace('"', "'")
             if brand in title:
@@ -112,7 +116,9 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
         # Find the sale price
-        sale_price_element = element.find('span', class_='_2Jxa7Rj1Kswy2fPVXbctjY')
+        sale_price_element = element.find(
+            "span", class_="_2Jxa7Rj1Kswy2fPVXbctjY"
+        )
         try:
             sale_price = sale_price_element.text.strip()
         except (AttributeError, TypeError):
@@ -120,46 +126,71 @@ def product_info_processor(page_source, output_info: OutputInfo, exchange_rate: 
             raise
 
         # Find the regular price
-        original_price_element = element.find('s', class_='E0_8CVj5Lnq3QKTQFJFQU')
+        original_price_element = element.find(
+            "s", class_="E0_8CVj5Lnq3QKTQFJFQU"
+        )
         try:
             original_price = original_price_element.text.strip()
         except (AttributeError, TypeError):
             original_price = sale_price  # Regular Price not found
 
         # Parse price string to int
-        original_price = round(product_price_parser(original_price) * exchange_rate)
+        original_price = round(
+            product_price_parser(original_price) * exchange_rate
+        )
         sale_price = round(product_price_parser(sale_price) * exchange_rate)
 
         shipping_fee = 700 if sale_price < 7000 else 0
         cost = sale_price + shipping_fee
 
-        selling_price = common.calculate_profitable_price(cost)
+        results = common.calculate_profit_margin(cost, original_price)
+        if results is None:
+            continue  # unprofitable
 
-        if selling_price > original_price * 0.88:
-            continue
+        selling_price, profit, profit_margin = results
 
         output_info.product_count += 1
-        product_info = \
-            ProductInfo(index=output_info.product_count, brand=brand, title=title,
-                        original_price=original_price, sale_price=sale_price,
-                        cost=cost, selling_price=selling_price,
-                        image1_src=image_urls[0] if len(image_urls) >= 1 else "",
-                        image2_src=image_urls[1] if len(image_urls) >= 2 else "",
-                        product_url=product_url)
+        product_info = ProductInfo(
+            index=output_info.product_count,
+            brand=brand,
+            title=title,
+            original_price=original_price,
+            sale_price=sale_price,
+            cost=cost,
+            selling_price=selling_price,
+            profit=profit,
+            profit_margin=profit_margin,
+            image1_src=image_urls[0] if len(image_urls) >= 1 else "",
+            image2_src=image_urls[1] if len(image_urls) >= 2 else "",
+            product_url=product_url,
+        )
         product_info.display_info()
 
         try:
-            input_file_path = os.path.join(output_info.output_dir, product_info.image1_filename)
+            input_file_path = os.path.join(
+                output_info.output_dir, product_info.image1_filename
+            )
 
-            common.download_image_from_url(product_info.image1_src, input_file_path)
+            common.download_image_from_url(
+                product_info.image1_src, input_file_path
+            )
 
-            image_editor.ig_story_image_processing(input_file_path, output_info.image_background_color,
-                                                   output_info.font_path,
-                                                   product_info.image1_insert_text)
+            image_editor.ig_story_image_processing(
+                input_file_path,
+                output_info.image_background_color,
+                output_info.font_path,
+                product_info.image1_insert_text,
+            )
 
             product_info.product_info_logging(output_info.output_dir)
-        except (InvalidInputError, HTTPError, RequestException,
-                FileNotFoundError, OSError, ImageProcessingError) as e:
+        except (
+            InvalidInputError,
+            HTTPError,
+            RequestException,
+            FileNotFoundError,
+            OSError,
+            ImageProcessingError,
+        ) as e:
             print(f"Product image processing failed: {e}")
             raise
 
@@ -171,16 +202,24 @@ def wait_for_page_load(driver: webdriver, timeout=10):
     while True:
         try:
             WebDriverWait(driver, timeout).until(
-                lambda state: driver.execute_script("return document.readyState") == "complete")
+                lambda state: driver.execute_script(
+                    "return document.readyState"
+                )
+                == "complete"
+            )
 
             # Wait for products
             product_element_class = "_8T7q2GDqmgeWgJYhbInA1"
             WebDriverWait(driver, timeout).until(
-                EC.presence_of_all_elements_located((By.CLASS_NAME, product_element_class)))
+                EC.presence_of_all_elements_located(
+                    (By.CLASS_NAME, product_element_class)
+                )
+            )
 
             # Wait for webpage footer
             footer = WebDriverWait(driver, timeout).until(
-                EC.presence_of_element_located((By.TAG_NAME, "footer")))
+                EC.presence_of_element_located((By.TAG_NAME, "footer"))
+            )
 
             pattern_to_check = "Download the CETTIRE App"
             if pattern_to_check in footer.text:
@@ -189,23 +228,35 @@ def wait_for_page_load(driver: webdriver, timeout=10):
                 # <div class="_1G4j5iHnSBb-ZZ_YNTiSDP">
                 #   <a href="https://apps.apple.com/app/cettire/id1607489142">
                 div_element = WebDriverWait(footer, timeout).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "_1G4j5iHnSBb-ZZ_YNTiSDP")))
+                    EC.presence_of_element_located(
+                        (By.CLASS_NAME, "_1G4j5iHnSBb-ZZ_YNTiSDP")
+                    )
+                )
 
-                apple_href_value = div_element.find_element(By.TAG_NAME, "a").get_attribute("href")
+                apple_href_value = div_element.find_element(
+                    By.TAG_NAME, "a"
+                ).get_attribute("href")
 
                 # Wait for the 'a' element with class "_1-PLV" to be present within the footer
                 # Instagram symbol
                 # <a class="_1-PLV2tu1YxtPyRZLO7LyG"
                 #    href="https://instagram.com/cettire" title="Cettire on Instagram">
                 a_element = WebDriverWait(footer, timeout).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "_1-PLV2tu1YxtPyRZLO7LyG")))
+                    EC.presence_of_element_located(
+                        (By.CLASS_NAME, "_1-PLV2tu1YxtPyRZLO7LyG")
+                    )
+                )
 
                 ig_href_value = a_element.get_attribute("href")
                 ig_title_value = a_element.get_attribute("title")
 
-                if apple_href_value.startswith("https://apps.apple.com/app/cettire") and \
-                        ig_href_value == "https://instagram.com/cettire" and \
-                        ig_title_value == "Cettire on Instagram":
+                if (
+                    apple_href_value.startswith(
+                        "https://apps.apple.com/app/cettire"
+                    )
+                    and ig_href_value == "https://instagram.com/cettire"
+                    and ig_title_value == "Cettire on Instagram"
+                ):
                     break
 
             elapsed = time.time() - start
@@ -217,14 +268,19 @@ def wait_for_page_load(driver: webdriver, timeout=10):
             raise
 
 
-def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
-                   exchange_rate: float, total_pages: int):
+def start_scraping(
+    driver: webdriver,
+    url: str,
+    output_info: OutputInfo,
+    exchange_rate: float,
+    total_pages: int,
+):
     driver.get(url)
     wait_for_page_load(driver)
     product_info_processor(driver.page_source, output_info, exchange_rate)
 
     for page in range(2, total_pages + 1):
-        if '?' in url:
+        if "?" in url:
             new_url = url + f"&page={page}"
         else:
             new_url = url + f"?page={page}"
@@ -234,7 +290,9 @@ def start_scraping(driver: webdriver, url: str, output_info: OutputInfo,
         product_info_processor(driver.page_source, output_info, exchange_rate)
 
 
-def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> bool:
+def web_scraper(
+    driver: webdriver, url: str, root_dir: str, font_path: str
+) -> bool:
     if common.check_url_validity(url) is False:
         return False
 
@@ -242,10 +300,14 @@ def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> b
     store_url_prefix = "https://www.cettire.com/tw"
 
     if not url.startswith(store_url_prefix):
-        print(f"URL is valid, but it does not belong to the {store_name} store website.")
+        print(
+            f"URL is valid, but it does not belong to the {store_name} store."
+        )
         return False
 
-    print("-------------------------- [ Start scraping ] --------------------------")
+    print(
+        "-------------------------- [ Start scraping ] --------------------------"
+    )
 
     exchange_rate = 1
 
@@ -265,8 +327,13 @@ def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> b
     os.makedirs(folder_path)
 
     product_image_bg_color = (255, 255, 255)  # default is white
-    output_info = OutputInfo(store_name=store_name, group=section, output_dir=folder_path,
-                             font_path=font_path, image_background_color=product_image_bg_color)
+    output_info = OutputInfo(
+        store_name=store_name,
+        group=section,
+        output_dir=folder_path,
+        font_path=font_path,
+        image_background_color=product_image_bg_color,
+    )
     output_info.display_info()
 
     result = True
@@ -277,14 +344,18 @@ def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> b
         page_source = driver.page_source
 
         # Find the pagination section on the webpage
-        soup = BeautifulSoup(page_source, 'html.parser')
-        custom_pagination = soup.select_one('ul.custom-pagination')
+        soup = BeautifulSoup(page_source, "html.parser")
+        custom_pagination = soup.select_one("ul.custom-pagination")
         if custom_pagination:
-            pagination_element = custom_pagination.select_one('li.current-of-page')
+            pagination_element = custom_pagination.select_one(
+                "li.current-of-page"
+            )
 
             # pagination_element: "current_page / total_pages"
             # print(f"pagination_element: {pagination_element.text.strip()}")
-            total_pages = int(pagination_element.text.strip().split('/')[1].strip())
+            total_pages = int(
+                pagination_element.text.strip().split("/")[1].strip()
+            )
         else:
             total_pages = 1
 
@@ -297,9 +368,11 @@ def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> b
     except TimeoutException:
         print("Element waiting timeout error")
         result = False
+
     except Exception as e:
-        print(f"Unknown scraping error: {e}")
+        print(f"Unknown scraping error({type(e).__name__}): {e}")
         result = False
+
     finally:
         if not result:
             print(common.abort_scraping_msg(url))
@@ -307,5 +380,7 @@ def web_scraper(driver: webdriver, url: str, root_dir: str, font_path: str) -> b
     if not output_info.product_count:
         common.delete_empty_folders(folder_path)
 
-    print("------------------------------------------------------------------------\n")
+    print(
+        "------------------------------------------------------------------------\n"
+    )
     return result

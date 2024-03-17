@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import shutil
 import time
@@ -41,7 +40,9 @@ class ChromeDriver:
                 shutil.rmtree(self.cache_dir)
             except OSError as e:
                 if e.winerror == 32:
-                    print("Unable to delete the file or folder as it is being used by another process.")
+                    print(
+                        "Unable to delete the file or folder as it is being used by another process."
+                    )
                     print("Terminate 'chromedriver.exe' orphans again.")
                     self.terminate_chromedriver_orphans()
                     shutil.rmtree(self.cache_dir)
@@ -51,36 +52,55 @@ class ChromeDriver:
             self.driver.quit()
             self.driver = None
 
-    def create(self, headless=True, max_retries=3, retry_delay_sec=3) -> webdriver:
+    def create(
+        self, headless=True, max_retries=3, retry_delay_sec=3
+    ) -> webdriver:
         user_data_dir = os.path.join(self.cache_dir, f"pid_{os.getpid()}")
 
         chrome_options = Options()
         if headless is True:
-            chrome_options.add_argument("--headless")  # Headless mode, no browser window displayed
+            chrome_options.add_argument(
+                "--headless"
+            )  # Headless mode, no browser window displayed
         chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
-        chrome_options.add_argument('--disable-logging')  # Disable JavaScript frontend logs
+        chrome_options.add_argument(
+            "--disable-logging"
+        )  # Disable JavaScript frontend logs
         chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
-        chrome_options.executable_path = os.path.join(user_data_dir, "chromedriver")
+        chrome_options.executable_path = os.path.join(
+            user_data_dir, "chromedriver"
+        )
 
         for retry in range(max_retries):
             try:
                 chrome_service = ChromeService()
-                chrome_service.silent = True  # Set silent to True to disable logging
-                driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+                chrome_service.silent = (
+                    True  # Set silent to True to disable logging
+                )
+                driver = webdriver.Chrome(
+                    service=chrome_service, options=chrome_options
+                )
                 driver.implicitly_wait(20)
                 self.driver = driver
                 return driver
-            except (WebDriverException, requests.exceptions.ConnectionError) as e:
-                print(f"Error: {e}. attempt {retry + 1}/{max_retries}, retrying...")
+            except (
+                WebDriverException,
+                requests.exceptions.ConnectionError,
+            ) as e:
+                print(
+                    f"Error: {e}. attempt {retry + 1}/{max_retries}, retrying..."
+                )
                 time.sleep(retry_delay_sec)
         else:
-            raise ChromeDriverError(f"Failed to create Chrome WebDriver after {max_retries} attempts.")
+            raise ChromeDriverError(
+                f"Failed to create Chrome WebDriver after {max_retries} attempts."
+            )
 
     @staticmethod
     def terminate_chromedriver_orphans():
-        for proc in psutil.process_iter(attrs=['pid', 'name']):
+        for proc in psutil.process_iter(attrs=["pid", "name"]):
             try:
-                if proc.name() == 'chromedriver.exe':
+                if proc.name() == "chromedriver.exe":
                     parent = psutil.Process(proc.pid)
                     children = parent.children(recursive=True)
                     for child in children:
@@ -88,8 +108,14 @@ class ChromeDriver:
                         child.wait()
                     parent.terminate()
                     parent.wait()
-                    print(f"Terminate 'chromedriver.exe' process tree with PID {proc.pid}")
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    print(
+                        f"Terminate 'chromedriver.exe' process tree with PID {proc.pid}"
+                    )
+            except (
+                psutil.NoSuchProcess,
+                psutil.AccessDenied,
+                psutil.ZombieProcess,
+            ):
                 pass
 
 
@@ -104,14 +130,20 @@ class WebDriverAction:
         time.sleep(wait_time)
 
     @staticmethod
-    def scroll_page_by_step(driver: webdriver, scroll_step=1000, scroll_total=30, wait_time=1):
+    def scroll_page_by_step(
+        driver: webdriver, scroll_step=1000, scroll_total=30, wait_time=1
+    ):
         if driver is None:
             return
         current_scroll_position = 0
         for _ in range(scroll_total):
-            driver.execute_script("window.scrollBy(0, {0});".format(scroll_step))
+            driver.execute_script(
+                "window.scrollBy(0, {0});".format(scroll_step)
+            )
             time.sleep(wait_time)
-            new_scroll_position = driver.execute_script("return window.scrollY;")
+            new_scroll_position = driver.execute_script(
+                "return window.scrollY;"
+            )
             if new_scroll_position == current_scroll_position:
                 break
             current_scroll_position = new_scroll_position

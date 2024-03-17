@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
 import os
 import shutil
 import time
 import urllib.parse
 
 from bs4 import BeautifulSoup
-from requests.exceptions import RequestException, HTTPError
 from selenium import webdriver
 from selenium.common.exceptions import (
     TimeoutException,
@@ -59,6 +57,10 @@ def product_info_processor(
         raise ElementNotFound("Product info not found")
 
     for idx, container in enumerate(product_containers, start=1):
+        sold_out_element = container.find("span", class_="product__sold-out")
+        if sold_out_element is not None:
+            continue
+
         product_url = "https://uptherestore.com" + container["href"]
 
         brand = (
@@ -73,15 +75,28 @@ def product_info_processor(
             .text.strip()
             .replace('"', "'")
         )
-        original_price = container.find(
-            "del", class_="price__amount"
-        ).text.strip()
-        sale_price = container.find("ins", class_="price__amount").text.strip()
-        # print(f"No.{idx}: {title}")
-        # print(f"brand: {brand}\n"
-        #       f"title: {title}\n"
-        #       f"price: {original_price}\n"
-        #       f"sale:  {sale_price}\n")
+
+        # Normal price
+        # normal_price_element = container.find("span", class_="price__amount")
+
+        original_price_element = container.find("del", class_="price__amount")
+        sale_price_element = container.find("ins", class_="price__amount")
+
+        if original_price_element is None or sale_price_element is None:
+            print(
+                f"\n[ Info ] Product ID.{idx}: "
+                f"'{brand} - {title}' is not on sale"
+            )
+            continue
+
+        original_price = original_price_element.text.strip()
+        sale_price = sale_price_element.text.strip()
+
+        # print(
+        #     f"No.{idx}: {brand} - {title}\n"
+        #     f"price: {original_price}\n"
+        #     f"sale:  {sale_price}"
+        # )
 
         image_urls = []
         images = container.find_all("img")
@@ -91,11 +106,13 @@ def product_info_processor(
             image_urls.append(image_url)
 
         margin = 1.03
-        aud_twd = exchange_rate * margin
+        aud_to_twd = exchange_rate * margin
 
         # Parse price string to int
-        original_price = round(product_price_parser(original_price) * aud_twd)
-        sale_price = round(product_price_parser(sale_price) * aud_twd)
+        original_price = round(
+            product_price_parser(original_price) * aud_to_twd
+        )
+        sale_price = round(product_price_parser(sale_price) * aud_to_twd)
 
         shipping_fee = 850
         tw_import_duty_rate = 1.16
@@ -105,10 +122,13 @@ def product_info_processor(
             * tw_import_duty_rate
         )
 
-        selling_price = common.calculate_profitable_price(cost)
-
-        if selling_price > original_price:
+        results = common.calculate_profit_margin(
+            cost, original_price, 0.11, True
+        )
+        if results is None:
             continue  # unprofitable
+
+        selling_price, profit, profit_margin = results
 
         output_info.product_count += 1
         product_info = ProductInfo(
@@ -119,6 +139,8 @@ def product_info_processor(
             sale_price=sale_price,
             cost=cost,
             selling_price=selling_price,
+            profit=profit,
+            profit_margin=profit_margin,
             image1_src=image_urls[0] if len(image_urls) >= 1 else "",
             image2_src=image_urls[1] if len(image_urls) >= 2 else "",
             product_url=product_url,
@@ -145,45 +167,20 @@ def product_info_processor(
 
         except (
             InvalidInputError,
-            HTTPError,
-            RequestException,
-            FileNotFoundError,
             OSError,
             ImageProcessingError,
         ) as e:
-            print(f"Product image processing failed: {e}")
+            print(f"Product image processing failed({type(e).__name__}): {e}")
             raise
 
 
 def wait_for_page_load(driver: webdriver, timeout=10):
     WebDriverAction.scroll_page_by_step(driver)
-    # wait for the website to fully load
-    try:
-        WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located(
-                (
-                    By.XPATH,
-                    "//div[contains(@class, 'cell') \
-                    and contains(@class, 'boost-pfs-action-list-enabled') \
-                    and not(contains(@class, 'live'))]",
-                )
-            )
-        )
-
-        WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, ".boost-pfs-filter-bottom-pagination")
-            )
-        )
-
-    except TimeoutException:
-        print("Element waiting timed out, unable to locate the element.")
-        raise
 
     s_time = time.time()
     while True:
         try:
-            # Wait for the "product-grid" element to appear
+            # Wait for the presence of "product-grid" element
             product_grid = WebDriverWait(driver, timeout).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "product-grid"))
             )
@@ -322,7 +319,7 @@ def web_scraper(
                     break
 
             if last_li_with_a:
-                total_pages = last_li_with_a.find("a").text.strip()
+                total_pages = int(last_li_with_a.find("a").text.strip())
 
         if total_pages is None:
             print(
@@ -347,7 +344,7 @@ def web_scraper(
         result = False
 
     except Exception as e:
-        print(f"Unknown scraping error: {e}")
+        print(f"Unknown scraping error({type(e).__name__}): {e}")
         result = False
 
     finally:

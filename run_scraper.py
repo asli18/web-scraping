@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import atexit
 import os
@@ -18,10 +17,15 @@ from scraper.store import chemist_warehouse
 from scraper.store.store_info import StoreWebScraper
 
 
-def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
-                         root_dir: str, font_path: str) -> None:
-    upthere_scraper = StoreWebScraper(upthere_store.web_scraper, chrome_driver,
-                                      root_dir, font_path)
+def scrape_upthere_store(
+    enable_multiprocessing: bool,
+    chrome_driver: ChromeDriver,
+    root_dir: str,
+    font_path: str,
+) -> None:
+    upthere_scraper = StoreWebScraper(
+        upthere_store.web_scraper, chrome_driver, root_dir, font_path
+    )
     brands_url = []
     brands = [
         "Needles",
@@ -43,17 +47,15 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         "Lite-Year",
         "Objects-IV-Life",
         "Satta",
-        # "Arcteryx",
-        # "Arcteryx-Veilance",
-
+        "Arcteryx",
+        "Arcteryx-Veilance",
         # Eyewear
         "Monokel-Eyewear",
-
         # Accessories
         "Maple",
         "Mikia",
         "Tom-Wood",
-        "bleue-burnham"
+        "bleue-burnham",
     ]
 
     for brand in brands:
@@ -62,7 +64,9 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
     try:
         if enable_multiprocessing:
             with Pool() as pool:
-                for result in pool.imap(upthere_scraper.execute_scraper, brands_url):
+                for result in pool.imap(
+                    upthere_scraper.execute_scraper, brands_url
+                ):
                     pass
         else:
             for url in brands_url:
@@ -72,10 +76,15 @@ def scrape_upthere_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         raise
 
 
-def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
-                        root_dir: str, font_path: str) -> None:
-    supply_scraper = StoreWebScraper(supply_store.web_scraper, chrome_driver,
-                                     root_dir, font_path)
+def scrape_supply_store(
+    enable_multiprocessing: bool,
+    chrome_driver: ChromeDriver,
+    root_dir: str,
+    font_path: str,
+) -> None:
+    supply_scraper = StoreWebScraper(
+        supply_store.web_scraper, chrome_driver, root_dir, font_path
+    )
     brands_url = [
         "https://www.supplystore.com.au/sale/tops",
         "https://www.supplystore.com.au/sale/bottoms",
@@ -90,7 +99,9 @@ def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDrive
     try:
         if enable_multiprocessing:
             with Pool() as pool:
-                for result in pool.imap(supply_scraper.execute_scraper, brands_url):
+                for result in pool.imap(
+                    supply_scraper.execute_scraper, brands_url
+                ):
                     pass
         else:
             for url in brands_url:
@@ -100,10 +111,15 @@ def scrape_supply_store(enable_multiprocessing: bool, chrome_driver: ChromeDrive
         raise
 
 
-def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
-                         root_dir: str, font_path: str) -> None:
-    cettire_scraper = StoreWebScraper(cettire_store.web_scraper, chrome_driver,
-                                      root_dir, font_path)
+def scrape_cettire_store(
+    enable_multiprocessing: bool,
+    chrome_driver: ChromeDriver,
+    root_dir: str,
+    font_path: str,
+) -> None:
+    cettire_scraper = StoreWebScraper(
+        cettire_store.web_scraper, chrome_driver, root_dir, font_path
+    )
 
     # All category of products
     brands_url = [
@@ -144,12 +160,16 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         brands_url.append(cettire_store.gen_store_sale_url(brand, category_bag))
 
     for brand in accessory_brands:
-        brands_url.append(cettire_store.gen_store_sale_url(brand, category_accessories))
+        brands_url.append(
+            cettire_store.gen_store_sale_url(brand, category_accessories)
+        )
 
     try:
         if enable_multiprocessing:
             with Pool() as pool:
-                for result in pool.imap(cettire_scraper.execute_scraper, brands_url):
+                for result in pool.imap(
+                    cettire_scraper.execute_scraper, brands_url
+                ):
                     pass
         else:
             for url in brands_url:
@@ -159,10 +179,19 @@ def scrape_cettire_store(enable_multiprocessing: bool, chrome_driver: ChromeDriv
         raise
 
 
-def scrape_chemist_warehouse(enable_multiprocessing: bool, chrome_driver: ChromeDriver,
-                             root_dir: str, font_path: str) -> None:
-    chemist_warehouse_scraper = StoreWebScraper(chemist_warehouse.web_scraper, chrome_driver,
-                                                root_dir, font_path, headless=False)
+def scrape_chemist_warehouse(
+    enable_multiprocessing: bool,
+    chrome_driver: ChromeDriver,
+    root_dir: str,
+    font_path: str,
+) -> None:
+    chemist_warehouse_scraper = StoreWebScraper(
+        chemist_warehouse.web_scraper,
+        chrome_driver,
+        root_dir,
+        font_path,
+        headless=False,
+    )
     brands_url = [
         "https://www.chemistwarehouse.com.au/"
         "buy/122444/neutrogena-rapid-wrinkle-repair-retinol-pro-night-cream-48g",
@@ -178,10 +207,12 @@ def scrape_chemist_warehouse(enable_multiprocessing: bool, chrome_driver: Chrome
 
 def main(root_dir=None) -> None:
     if root_dir is None:
-        if getattr(sys, 'frozen', False):
+        if getattr(sys, "frozen", False):
             root_dir = os.path.dirname(sys.executable)  # pyinstaller executable
         else:
-            root_dir = os.path.dirname(os.path.abspath(__file__))  # Python3 script
+            root_dir = os.path.dirname(
+                os.path.abspath(__file__)
+            )  # Python3 script
 
     font_name = "SourceSerifPro-SemiBold.ttf"
     font_path_candidates = [
@@ -199,21 +230,35 @@ def main(root_dir=None) -> None:
     atexit.register(ChromeDriver.terminate_chromedriver_orphans)
     enable_multiprocessing = True
 
-    with ChromeDriver(cache_dir=os.path.join(root_dir, "chrome_cache")) as chrome_driver:
-        scrape_upthere_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
-        scrape_supply_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
-        scrape_cettire_store(enable_multiprocessing, chrome_driver, root_dir, font_path)
-        scrape_chemist_warehouse(enable_multiprocessing, chrome_driver, root_dir, font_path)
+    with ChromeDriver(
+        cache_dir=os.path.join(root_dir, "chrome_cache")
+    ) as chrome_driver:
+        scrape_upthere_store(
+            enable_multiprocessing, chrome_driver, root_dir, font_path
+        )
+        scrape_supply_store(
+            enable_multiprocessing, chrome_driver, root_dir, font_path
+        )
+        scrape_cettire_store(
+            enable_multiprocessing, chrome_driver, root_dir, font_path
+        )
+        scrape_chemist_warehouse(
+            enable_multiprocessing, chrome_driver, root_dir, font_path
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     process = psutil.Process(os.getpid())
     before_memory = process.memory_info().rss
 
     start_time = time.perf_counter()
 
-    parser = argparse.ArgumentParser(description='Web scraping tool for online stores')
-    parser.add_argument('root_dir', nargs='?', default=None, help='Root directory path')
+    parser = argparse.ArgumentParser(
+        description="Web scraping tool for online stores"
+    )
+    parser.add_argument(
+        "root_dir", nargs="?", default=None, help="Root directory path"
+    )
     args = parser.parse_args()
 
     try:
@@ -221,7 +266,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("Exiting main process due to KeyboardInterrupt")
     except Exception as e:
-        print(f"Unknown error: {e}")
+        print(f"Unknown error({type(e).__name__}): {e}")
 
     end_time = time.perf_counter()
     execution_time = end_time - start_time
@@ -235,9 +280,11 @@ if __name__ == '__main__':
     memory_used = (after_memory - before_memory) / 1024 / 1024  # MB
     print(f"Memory usage: {memory_used} MB")
 
-    days, hours, minutes, seconds = common.convert_seconds_to_time(execution_time)
-    print(f"Total Elapsed Time: {hours:02} hr {minutes:02} min {seconds:02} sec "
-          f"({execution_time:.3f} s)")
+    _, hours, minutes, seconds = common.convert_seconds_to_time(execution_time)
+    print(
+        f"Total Time Duration: {hours:02}:{minutes:02}:{seconds:02} "
+        f"({execution_time:.3f} s)"
+    )
 
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         input("Press any key to exit...")

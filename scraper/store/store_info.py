@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import logging
 import os
 from typing import Callable
@@ -7,11 +6,18 @@ import attr
 from selenium import webdriver
 
 from scraper.chrome_driver import ChromeDriver, ChromeDriverError
+from scraper.common import calculate_discount_percentage
 
 
 class StoreWebScraper:
-    def __init__(self, web_scraper_func: Callable[[webdriver, str, str, str], bool],
-                 chrome_driver: ChromeDriver, root_dir: str, font_path: str, headless=True):
+    def __init__(
+        self,
+        web_scraper_func: Callable[[webdriver, str, str, str], bool],
+        chrome_driver: ChromeDriver,
+        root_dir: str,
+        font_path: str,
+        headless=True,
+    ):
         self.__web_scraper = web_scraper_func
         self.chrome_driver = chrome_driver
         self.root_dir = root_dir
@@ -21,12 +27,16 @@ class StoreWebScraper:
     def execute_scraper(self, url: str):
         try:
             driver = self.chrome_driver.create(headless=self.headless)
-            return self.__web_scraper(driver, url, self.root_dir, self.font_path)
+            return self.__web_scraper(
+                driver, url, self.root_dir, self.font_path
+            )
         except ChromeDriverError as e:
             print(f"ChromeDriverError: {e}")
             return False
         except TimeoutError:
-            print("TimeoutError: Connection timed out. Retrying or taking other actions.")
+            print(
+                "TimeoutError: Connection timed out. Retrying or taking other actions."
+            )
             return False
         except KeyboardInterrupt:
             print("Received KeyboardInterrupt, exit scraper")
@@ -44,9 +54,27 @@ class ProductInfo:
     sale_price: int = attr.ib(default=0)
     cost: int = attr.ib(default=0)
     selling_price: int = attr.ib(default=0)
+    profit: int = attr.ib(default=0)
+    profit_margin: float = attr.ib(default=0)
     image1_src: str = attr.ib(default="")
     image2_src: str = attr.ib(default="")
     product_url: str = attr.ib(default="")
+
+    @property
+    def sale_discount(self):
+        return calculate_discount_percentage(
+            self.original_price, self.sale_price
+        )
+
+    @property
+    def cost_discount(self):
+        return calculate_discount_percentage(self.original_price, self.cost)
+
+    @property
+    def selling_discount(self):
+        return calculate_discount_percentage(
+            self.original_price, self.selling_price
+        )
 
     @property
     def image1_filename(self):
@@ -56,47 +84,45 @@ class ProductInfo:
     def image1_insert_text(self):
         return f"{self.brand}\n{self.title}\n${self.selling_price:,}"
 
+    @property
+    def product_info(self):
+        info = (
+            f"\n-------- [ Product No.{self.index} ] --------\n"
+            f"Brand:          {self.brand}\n"
+            f"Name:           {self.title}\n"
+            f"Retail Price:   ${self.original_price:,}\n"
+            f"Sale Price:     ${self.sale_price:,} "
+            f"(-{self.sale_discount:.2f}%)\n"
+            f"Estimated Cost: ${self.cost:,} (-{self.cost_discount:.2f}%)\n"
+            f"Selling Price:  ${self.selling_price:,} "
+            f"(-{self.selling_discount:.2f}%)\n"
+            f"Net Profit:     ${self.profit}\n"
+            f"Profit Margin:  {self.profit_margin:.2f}%\n"
+            f"Photo 1 URL:    {self.image1_src}\n"
+            f"Photo 2 URL:    {self.image2_src}\n"
+            f"Product URL:    {self.product_url}\n"
+        )
+        return info
+
     def display_info(self):
-        print()
-        print(f"-------- [ Product No.{self.index} ] --------")
-        print(f"Brand:          {self.brand}")
-        print(f"Name:           {self.title}")
-        print(f"Retail Price:   ${self.original_price:,}")
-        print(f"Sale Price:     ${self.sale_price:,}")
-        print(f"Estimated cost: ${self.cost:,}")
-        print(f"Selling Price:  ${self.selling_price:,}")
-        print(f"Photo 1 URL:    {self.image1_src}")
-        print(f"Photo 2 URL:    {self.image2_src}")
-        print(f"Product URL:    {self.product_url}")
-        print()
+        print(self.product_info)
 
     def product_info_logging(self, log_output_dir):
-        log_path = os.path.join(log_output_dir, 'list.txt')
+        log_path = os.path.join(log_output_dir, "list.txt")
 
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
 
-        formatter = logging.Formatter('%(message)s')
+        formatter = logging.Formatter("%(message)s")
 
         file_handler = None
 
         try:
-            file_handler = logging.FileHandler(log_path, encoding='utf-8')
+            file_handler = logging.FileHandler(log_path, encoding="utf-8")
             file_handler.setFormatter(formatter)
 
             logger.addHandler(file_handler)
-
-            logger.info(f"---- [ Product No.{self.index} ] ----")
-            logger.info(f"Brand:          {self.brand}")
-            logger.info(f"Name:           {self.title}")
-            logger.info(f"Retail Price:   ${self.original_price:,}")
-            logger.info(f"Sale Price:     ${self.sale_price:,}")
-            logger.info(f"Estimated cost: ${self.cost:,}")
-            logger.info(f"Selling Price:  ${self.selling_price:,}")
-            logger.info(f"Photo 1 URL:    {self.image1_src}")
-            logger.info(f"Photo 2 URL:    {self.image2_src}")
-            logger.info(f"Product URL:    {self.product_url}")
-            logger.info("")
+            logger.info(self.product_info)
 
         except FileNotFoundError as e:
             logger.error(f"File not found: {str(e)}")

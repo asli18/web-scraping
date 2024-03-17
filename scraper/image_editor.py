@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 
 import cv2
@@ -11,11 +10,20 @@ class ImageProcessingError(Exception):
 
 
 # Add text to an image (JPEG or PNG) and save the output as a JPEG file
-def add_text_to_image(in_file_path: str, out_file_path: str, font_path: str, text: str, size, position):
+def add_text_to_image(
+    in_file_path: str,
+    out_file_path: str,
+    font_path: str,
+    text: str,
+    size,
+    position,
+):
     # Check if the output directory exists
     output_directory = os.path.dirname(out_file_path)
     if not os.path.exists(output_directory):
-        raise ImageProcessingError(f"Output directory does not exist: {output_directory}")
+        raise ImageProcessingError(
+            f"Output directory does not exist: {output_directory}"
+        )
 
     if not os.path.exists(font_path):
         raise FileNotFoundError(f"Error processing font file: {font_path}")
@@ -84,8 +92,13 @@ def change_file_extension(file_path, new_extension):
     return new_file_path
 
 
-def expand_and_center_image(image_path, output_path, new_size, background_color=(255, 255, 255),
-                            min_dpi=300):
+def expand_and_center_image(
+    image_path,
+    output_path,
+    new_size,
+    background_color=(255, 255, 255),
+    min_dpi=300,
+):
     """
     Expand the image to the new size with a specified background color and center the original image.
 
@@ -119,7 +132,10 @@ def expand_and_center_image(image_path, output_path, new_size, background_color=
             new_image = Image.new("RGB", new_size, background_color)
 
             # Calculate the placement position of the original image in the new image to keep it centered
-            offset = ((new_width - original_size[0]) // 2, (new_height - original_size[1]) // 2)
+            offset = (
+                (new_width - original_size[0]) // 2,
+                (new_height - original_size[1]) // 2,
+            )
 
             # Paste the original image onto the center of the new image
             new_image.paste(image, offset)
@@ -154,8 +170,12 @@ def resize_for_ig_story(input_file_path, image_background_color):
         new_height = int(new_width / target_aspect_ratio)
 
     try:
-        expand_and_center_image(input_file_path, input_file_path, (new_width, new_height),
-                                image_background_color)
+        expand_and_center_image(
+            input_file_path,
+            input_file_path,
+            (new_width, new_height),
+            image_background_color,
+        )
     except (FileNotFoundError, OSError, ImageProcessingError) as e:
         print(f"Resize the image error: {e}")
         raise
@@ -171,17 +191,27 @@ def insert_text_to_ig_story(input_file_path, font_path, insert_text):
 
     image_width_to_text_position_x_ratio = 30.53
     image_height_to_text_position_y_ratio = 7.3
-    text_position = (round(width / image_width_to_text_position_x_ratio),
-                     round(height / image_height_to_text_position_y_ratio))
+    text_position = (
+        round(width / image_width_to_text_position_x_ratio),
+        round(height / image_height_to_text_position_y_ratio),
+    )
     try:
-        add_text_to_image(input_file_path, input_file_path, font_path,
-                          insert_text, text_size, text_position)
+        add_text_to_image(
+            input_file_path,
+            input_file_path,
+            font_path,
+            insert_text,
+            text_size,
+            text_position,
+        )
     except (FileNotFoundError, ImageProcessingError) as e:
         print(f"Insert text to IG story image error:  {e}")
         raise
 
 
-def ig_story_image_processing(input_file_path, image_background_color, font_path, insert_text):
+def ig_story_image_processing(
+    input_file_path, image_background_color, font_path, insert_text
+):
     print("IG Story Image processing")
 
     resize_for_ig_story(input_file_path, image_background_color)
@@ -204,20 +234,38 @@ def example() -> None:
         position = (30, 10)
 
         input_file_path = "./image_sample/astronaut.png"
-        output_file_path = change_file_extension(append_text_to_filename(input_file_path, "_mod"), ".jpg")
+        output_file_path = change_file_extension(
+            append_text_to_filename(input_file_path, "_mod"), ".jpg"
+        )
         # output_file_path = "./image_sample/astronaut_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, font_path, insert_text, size, position)
+        add_text_to_image(
+            input_file_path,
+            output_file_path,
+            font_path,
+            insert_text,
+            size,
+            position,
+        )
 
         input_file_path = "./image_sample/lightning.jpg"
         output_file_path = append_text_to_filename(input_file_path, "_mod")
         # output_file_path = "./image_sample/lightning_mod.jpg"
-        add_text_to_image(input_file_path, output_file_path, font_path, insert_text, size, position)
+        add_text_to_image(
+            input_file_path,
+            output_file_path,
+            font_path,
+            insert_text,
+            size,
+            position,
+        )
 
     except (Exception, ImageProcessingError) as e:
         print(f"Error occurred during image processing: {e}")
 
 
-def create_ig_story_image_example(image_path: str, insert_text: str = "") -> None:
+def create_ig_story_image_example(
+    image_path: str, insert_text: str = ""
+) -> None:
     try:
         app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
         font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
@@ -235,15 +283,25 @@ def create_ig_story_image_example(image_path: str, insert_text: str = "") -> Non
 
         image_width_to_text_position_x_ratio = 30.53
         image_height_to_text_position_y_ratio = 7.3
-        text_position = (round(width / image_width_to_text_position_x_ratio),
-                         round(new_height / image_height_to_text_position_y_ratio))
+        text_position = (
+            round(width / image_width_to_text_position_x_ratio),
+            round(new_height / image_height_to_text_position_y_ratio),
+        )
 
         output_file_path = append_text_to_filename(image_path, "_ig_story")
 
-        expand_and_center_image(image_path, output_file_path, (width, new_height))
+        expand_and_center_image(
+            image_path, output_file_path, (width, new_height)
+        )
 
-        add_text_to_image(output_file_path, output_file_path, font_path, insert_text,
-                          text_size, text_position)
+        add_text_to_image(
+            output_file_path,
+            output_file_path,
+            font_path,
+            insert_text,
+            text_size,
+            text_position,
+        )
 
     except (Exception, ImageProcessingError) as e:
         print(f"Error occurred during image processing: {e}")
@@ -265,10 +323,10 @@ def generate_gray_image(width=256, height=256) -> None:
     gray_data = np.array(gray_list, dtype=np.uint8)
 
     # Show grayscale image
-    cv2.imshow('Gray Image', gray_data)
+    cv2.imshow("Gray Image", gray_data)
 
     key = cv2.waitKey(0)
-    if key == ord('s'):
+    if key == ord("s"):
         image_name = "gray_image.png"
         print(f"Save grayscale image: {image_name}")
         cv2.imwrite(image_name, gray_data)
@@ -276,7 +334,7 @@ def generate_gray_image(width=256, height=256) -> None:
     cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     example()
     create_ig_story_image_example("./image_sample/lightning.jpg", "Lightning")
     generate_gray_image()

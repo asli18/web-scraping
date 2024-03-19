@@ -130,6 +130,9 @@ def product_info_processor(
 
         selling_price, profit, profit_margin = results
 
+        if profit < 500:
+            continue
+
         output_info.product_count += 1
         product_info = ProductInfo(
             index=output_info.product_count,
@@ -141,27 +144,26 @@ def product_info_processor(
             selling_price=selling_price,
             profit=profit,
             profit_margin=profit_margin,
-            image1_src=image_urls[0] if len(image_urls) >= 1 else "",
-            image2_src=image_urls[1] if len(image_urls) >= 2 else "",
+            image_urls=image_urls,
             product_url=product_url,
         )
         product_info.display_info()
 
         try:
-            input_file_path = os.path.join(
-                output_info.output_dir, product_info.image1_filename
-            )
+            for index, image_url in enumerate(product_info.image_urls):
+                input_file_path = os.path.join(
+                    output_info.output_dir,
+                    product_info.image_filename_list[index],
+                )
 
-            common.download_image_from_url(
-                product_info.image1_src, input_file_path
-            )
+                common.download_image_from_url(image_url, input_file_path)
 
-            image_editor.ig_story_image_processing(
-                input_file_path,
-                output_info.image_background_color,
-                output_info.font_path,
-                product_info.image1_insert_text,
-            )
+                image_editor.ig_story_image_processing(
+                    input_file_path,
+                    output_info.image_background_color,
+                    output_info.font_path,
+                    product_info.image_insert_text,
+                )
 
             product_info.product_info_logging(output_info.output_dir)
 

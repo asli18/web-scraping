@@ -56,8 +56,7 @@ class ProductInfo:
     selling_price: int = attr.ib(default=0)
     profit: int = attr.ib(default=0)
     profit_margin: float = attr.ib(default=0)
-    image1_src: str = attr.ib(default="")
-    image2_src: str = attr.ib(default="")
+    image_urls: list[str] = attr.ib(default=[])
     product_url: str = attr.ib(default="")
 
     @property
@@ -76,12 +75,21 @@ class ProductInfo:
             self.original_price, self.selling_price
         )
 
-    @property
-    def image1_filename(self):
-        return f"{self.index} - {self.brand} - {self.title}.jpg"
+    def image_url(self, index: int) -> str:
+        if 0 <= index < len(self.image_urls):
+            return self.image_urls[index]
+        else:
+            return ""
 
     @property
-    def image1_insert_text(self):
+    def image_filename_list(self) -> list[str]:
+        return [
+            f"{self.index}-1 - {self.brand} - {self.title}.jpg",
+            f"{self.index}-2 - {self.brand} - {self.title}.jpg",
+        ]
+
+    @property
+    def image_insert_text(self):
         return f"{self.brand}\n{self.title}\n${self.selling_price:,}"
 
     @property
@@ -98,8 +106,8 @@ class ProductInfo:
             f"(-{self.selling_discount:.2f}%)\n"
             f"Net Profit:     ${self.profit}\n"
             f"Profit Margin:  {self.profit_margin:.2f}%\n"
-            f"Photo 1 URL:    {self.image1_src}\n"
-            f"Photo 2 URL:    {self.image2_src}\n"
+            f"Photo 1 URL:    {self.image_url(0)}\n"
+            f"Photo 2 URL:    {self.image_url(1)}\n"
             f"Product URL:    {self.product_url}\n"
         )
         return info

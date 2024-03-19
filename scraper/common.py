@@ -102,16 +102,18 @@ def calculate_profitable_price(
         return min(default_increment + proportional_increment, diff * 0.5)
 
     increment = calculate_increment()
+
+    if original_price is not None and max_profit and original_price > cost:
+        # Only adjust if original price is higher and leaving room for profit
+        price_diff = original_price - cost
+        if price_diff > increment:
+            increment = adjust_price_by_original(price_diff, increment)
+
     selling_price = cost + increment
 
-    if original_price is not None and original_price > cost:
-        if max_profit and (original_price - cost) > increment:
-            price_diff = original_price - cost
-            adjusted_increment = adjust_price_by_original(price_diff, increment)
-            selling_price = cost + adjusted_increment
-
-        if selling_price > original_price:
-            return None
+    # Return None if selling price exceeds original price
+    if original_price is not None and selling_price > original_price:
+        return None
 
     # Round to the next higher multiple of 20
     selling_price = int(math.ceil(selling_price / 20) * 20)

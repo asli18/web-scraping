@@ -223,8 +223,10 @@ def ig_story_image_processing(
 # Example usage
 def example() -> None:
     try:
-        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
-        font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        font_path = os.path.join(
+            app_dir, "fonts", "SourceSerifPro-SemiBold.ttf"
+        )
         if not os.path.exists(font_path):
             print(f"Font file not found: {font_path}")
             return
@@ -233,11 +235,10 @@ def example() -> None:
         size = 40
         position = (30, 10)
 
-        input_file_path = "./image_sample/astronaut.png"
+        input_file_path = os.path.join(app_dir, "image_sample", "astronaut.png")
         output_file_path = change_file_extension(
             append_text_to_filename(input_file_path, "_mod"), ".jpg"
         )
-        # output_file_path = "./image_sample/astronaut_mod.jpg"
         add_text_to_image(
             input_file_path,
             output_file_path,
@@ -247,9 +248,8 @@ def example() -> None:
             position,
         )
 
-        input_file_path = "./image_sample/lightning.jpg"
+        input_file_path = os.path.join(app_dir, "image_sample", "lightning.jpg")
         output_file_path = append_text_to_filename(input_file_path, "_mod")
-        # output_file_path = "./image_sample/lightning_mod.jpg"
         add_text_to_image(
             input_file_path,
             output_file_path,
@@ -267,8 +267,10 @@ def create_ig_story_image_example(
     image_path: str, insert_text: str = ""
 ) -> None:
     try:
-        app_dir = os.path.dirname(os.path.abspath(__file__))  # Python 3 script
-        font_path = os.path.join(app_dir, "SourceSerifPro-SemiBold.ttf")
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        font_path = os.path.join(
+            app_dir, "fonts", "SourceSerifPro-SemiBold.ttf"
+        )
         if not os.path.exists(font_path):
             print(f"Font file not found: {font_path}")
             return
@@ -335,6 +337,10 @@ def generate_gray_image(width=256, height=256) -> None:
 
 
 if __name__ == "__main__":
-    example()
-    create_ig_story_image_example("./image_sample/lightning.jpg", "Lightning")
     generate_gray_image()
+
+    example()
+
+    app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    image_path = os.path.join(app_dir, "image_sample", "lightning.jpg")
+    create_ig_story_image_example(image_path, "Lightning")

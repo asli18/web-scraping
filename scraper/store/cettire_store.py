@@ -182,6 +182,8 @@ def product_info_processor(
                     output_info.image_background_color,
                     output_info.font_path,
                     product_info.image_insert_text,
+                    product_info.image_strikethrough_line_index,
+                    product_info.image_strikethrough_text,
                 )
 
             product_info.product_info_logging(output_info.output_dir)

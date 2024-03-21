@@ -9,6 +9,75 @@ class ImageProcessingError(Exception):
     pass
 
 
+def add_text_to_image_with_strikethrough(
+    in_file_path: str,
+    out_file_path: str,
+    font_path: str,
+    text: str,
+    text_size,
+    text_position,
+    strikethrough_line_index: int,
+    strikethrough_text: str,
+):
+    # Check if the output directory exists
+    output_directory = os.path.dirname(out_file_path)
+    if not os.path.exists(output_directory):
+        raise ImageProcessingError(
+            f"Output directory does not exist: {output_directory}"
+        )
+
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"Error processing font file: {font_path}")
+
+    try:
+        # Open the image and ensure the file is properly closed using a context manager
+        with Image.open(in_file_path) as image:
+            # Convert the image to RGB mode (if it's in RGBA format)
+            image = image.convert("RGB")
+
+            # Get the DPI value
+            dpi = image.info.get("dpi")
+
+            # Create a drawing object to add text
+            draw = ImageDraw.Draw(image)
+            font = ImageFont.truetype(font_path, text_size)
+            line_gap = 4
+
+            # lines = text.splitlines()
+            # strike_through_width = draw.textlength(
+            #     lines[strike_through_line_index], font=font
+            # )
+            strikethrough_width = draw.textlength(strikethrough_text, font=font)
+            text_height = text_size
+
+            draw.text(
+                text_position, text, font=font, fill=(0, 0, 0), spacing=line_gap
+            )
+
+            # position (x, y)
+            start_y = (
+                text_position[1]
+                + (text_height + line_gap) * strikethrough_line_index
+                + text_size // 2
+            )
+            start_pos = (
+                text_position[0],
+                start_y,
+            )
+            end_pos = (
+                text_position[0] + strikethrough_width,
+                start_y,
+            )
+            draw.line([start_pos, end_pos], fill=(0, 0, 0), width=5)
+
+            # Save the modified image
+            image.save(out_file_path, dpi=dpi)
+            print(f"Saved modified image as: {out_file_path}")
+
+    except (FileNotFoundError, OSError, IOError, SyntaxError) as e:
+        raise ImageProcessingError(f"Error processing image: {e}")
+
+
 # Add text to an image (JPEG or PNG) and save the output as a JPEG file
 def add_text_to_image(
     in_file_path: str,
@@ -52,12 +121,12 @@ def add_text_to_image(
         raise ImageProcessingError(f"Error processing image: {e}")
 
 
-def append_text_to_filename(file_path, text):
+def append_text_to_filename(file_path, text) -> str:
     directory, filename = os.path.split(file_path)
     name, extension = os.path.splitext(filename)
     new_filename = name + text + extension
     new_file_path = os.path.join(directory, new_filename)
-    return new_file_path
+    return str(new_file_path)
 
 
 def get_image_size(image_path):
@@ -76,7 +145,7 @@ def delete_image(image_path):
         raise ImageProcessingError(f"Error occurred while deleting image: {e}")
 
 
-def change_file_extension(file_path, new_extension):
+def change_file_extension(file_path, new_extension) -> str:
     # Get the directory path and filename from the file path
     directory, filename = os.path.split(file_path)
 
@@ -89,14 +158,14 @@ def change_file_extension(file_path, new_extension):
     # Combine the new filename with the directory path
     new_file_path = os.path.join(directory, new_filename)
 
-    return new_file_path
+    return str(new_file_path)
 
 
 def expand_and_center_image(
     image_path,
     output_path,
-    new_size,
-    background_color=(255, 255, 255),
+    new_size: tuple[int, int],
+    background_color: tuple[int, int, int] = (255, 255, 255),
     min_dpi=300,
 ):
     """
@@ -149,7 +218,9 @@ def expand_and_center_image(
         raise ImageProcessingError(f"Error processing image: {e}")
 
 
-def resize_for_ig_story(input_file_path, image_background_color):
+def resize_for_ig_story(
+    input_file_path: str, image_background_color: tuple[int, int, int]
+):
     width, height = get_image_size(input_file_path)
     aspect_ratio = width / height
 
@@ -183,7 +254,13 @@ def resize_for_ig_story(input_file_path, image_background_color):
     return new_width, new_height
 
 
-def insert_text_to_ig_story(input_file_path, font_path, insert_text):
+def insert_text_to_ig_story(
+    input_file_path: str,
+    font_path: str,
+    insert_text: str,
+    strikethrough_line_index: int = None,
+    strikethrough_text: str = None,
+):
     width, height = get_image_size(input_file_path)
 
     image_width_to_text_ratio = 29
@@ -196,26 +273,50 @@ def insert_text_to_ig_story(input_file_path, font_path, insert_text):
         round(height / image_height_to_text_position_y_ratio),
     )
     try:
-        add_text_to_image(
-            input_file_path,
-            input_file_path,
-            font_path,
-            insert_text,
-            text_size,
-            text_position,
-        )
+        if strikethrough_line_index is None:
+            add_text_to_image(
+                input_file_path,
+                input_file_path,
+                font_path,
+                insert_text,
+                text_size,
+                text_position,
+            )
+        else:
+            add_text_to_image_with_strikethrough(
+                input_file_path,
+                input_file_path,
+                font_path,
+                insert_text,
+                text_size,
+                text_position,
+                strikethrough_line_index,
+                strikethrough_text,
+            )
+
     except (FileNotFoundError, ImageProcessingError) as e:
         print(f"Insert text to IG story image error:  {e}")
         raise
 
 
 def ig_story_image_processing(
-    input_file_path, image_background_color, font_path, insert_text
+    input_file_path: str,
+    image_background_color: tuple[int, int, int],
+    font_path: str,
+    insert_text: str,
+    strikethrough_line_index: int = None,
+    strikethrough_text: str = None,
 ):
     print("IG Story Image processing")
 
     resize_for_ig_story(input_file_path, image_background_color)
-    insert_text_to_ig_story(input_file_path, font_path, insert_text)
+    insert_text_to_ig_story(
+        input_file_path,
+        font_path,
+        insert_text,
+        strikethrough_line_index,
+        strikethrough_text,
+    )
 
     print("IG Story Image processing completed")
 
@@ -231,22 +332,9 @@ def example() -> None:
             print(f"Font file not found: {font_path}")
             return
 
-        insert_text = "Hello!\nSpace"
+        insert_text = "0 Hello!\n1 Space\n2 This is the third line of text."
         size = 40
         position = (30, 10)
-
-        input_file_path = os.path.join(app_dir, "image_sample", "astronaut.png")
-        output_file_path = change_file_extension(
-            append_text_to_filename(input_file_path, "_mod"), ".jpg"
-        )
-        add_text_to_image(
-            input_file_path,
-            output_file_path,
-            font_path,
-            insert_text,
-            size,
-            position,
-        )
 
         input_file_path = os.path.join(app_dir, "image_sample", "lightning.jpg")
         output_file_path = append_text_to_filename(input_file_path, "_mod")
@@ -257,6 +345,24 @@ def example() -> None:
             insert_text,
             size,
             position,
+        )
+
+        strike_through_index = 2
+        strike_through_text = "2 This is"
+
+        input_file_path = os.path.join(app_dir, "image_sample", "astronaut.png")
+        output_file_path = change_file_extension(
+            append_text_to_filename(input_file_path, "_mod"), ".jpg"
+        )
+        add_text_to_image_with_strikethrough(
+            input_file_path,
+            output_file_path,
+            font_path,
+            insert_text,
+            size,
+            position,
+            strike_through_index,
+            strike_through_text,
         )
 
     except (Exception, ImageProcessingError) as e:
@@ -337,10 +443,10 @@ def generate_gray_image(width=256, height=256) -> None:
 
 
 if __name__ == "__main__":
-    generate_gray_image()
+    # generate_gray_image()
 
     example()
 
-    app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    image_path = os.path.join(app_dir, "image_sample", "lightning.jpg")
-    create_ig_story_image_example(image_path, "Lightning")
+    # app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # image_path = os.path.join(app_dir, "image_sample", "lightning.jpg")
+    # create_ig_story_image_example(image_path, "Lightning")

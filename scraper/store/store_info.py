@@ -60,17 +60,17 @@ class ProductInfo:
     product_url: str = attr.ib(default="")
 
     @property
-    def sale_discount(self):
+    def sale_discount(self) -> float:
         return calculate_discount_percentage(
             self.original_price, self.sale_price
         )
 
     @property
-    def cost_discount(self):
+    def cost_discount(self) -> float:
         return calculate_discount_percentage(self.original_price, self.cost)
 
     @property
-    def selling_discount(self):
+    def selling_discount(self) -> float:
         return calculate_discount_percentage(
             self.original_price, self.selling_price
         )
@@ -89,8 +89,21 @@ class ProductInfo:
         ]
 
     @property
-    def image_insert_text(self):
-        return f"{self.brand}\n{self.title}\n${self.selling_price:,}"
+    def image_insert_text(self) -> str:
+        return (
+            f"{self.brand}\n"
+            f"{self.title}\n"
+            f"${self.original_price:,}   {self.selling_discount:.0f}% off\n"
+            f"${self.selling_price:,}\n"
+        )
+
+    @property
+    def image_strikethrough_line_index(self) -> int:
+        return 2
+
+    @property
+    def image_strikethrough_text(self) -> str:
+        return f"${self.original_price:,}"
 
     @property
     def product_info(self):
@@ -149,7 +162,7 @@ class OutputInfo:
     output_dir: str = attr.ib()
     font_path: str = attr.ib()
     product_count: int = attr.ib(default=0)
-    image_background_color: tuple = attr.ib(default=None)
+    image_background_color: tuple[int, int, int] = attr.ib(default=None)
 
     def display_info(self):
         print("Store name:", self.store_name)

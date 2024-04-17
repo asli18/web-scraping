@@ -74,7 +74,7 @@ def add_text_to_image_with_strikethrough(
             image.save(out_file_path, dpi=dpi)
             print(f"Saved modified image as: {out_file_path}")
 
-    except (FileNotFoundError, OSError, IOError, SyntaxError) as e:
+    except (OSError, IOError, SyntaxError) as e:
         raise ImageProcessingError(f"Error processing image: {e}")
 
 

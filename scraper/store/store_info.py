@@ -35,7 +35,8 @@ class StoreWebScraper:
             return False
         except TimeoutError:
             print(
-                "TimeoutError: Connection timed out. Retrying or taking other actions."
+                "TimeoutError: Connection timed out. "
+                "Retrying or taking other actions."
             )
             return False
         except KeyboardInterrupt:

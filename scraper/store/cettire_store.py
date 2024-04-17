@@ -277,21 +277,37 @@ def start_scraping(
     url: str,
     output_info: OutputInfo,
     exchange_rate: float,
-    total_pages: int,
 ):
+    def is_next_button_active(page_source) -> bool:
+        soup = BeautifulSoup(page_source, "html.parser")
+        next_button = soup.find("li", attrs={"data-page": "next"})
+        return (
+            False
+            if next_button and "button-disabled" in next_button.get("class", [])
+            else True
+        )
+
+    total_pages = 1
+
     driver.get(url)
     wait_for_page_load(driver)
     product_info_processor(driver.page_source, output_info, exchange_rate)
+    if not is_next_button_active(driver.page_source):
+        return total_pages
 
-    for page in range(2, total_pages + 1):
+    total_pages = 2
+    while True:
         if "?" in url:
-            new_url = url + f"&page={page}"
+            new_url = url + f"&page={total_pages}"
         else:
-            new_url = url + f"?page={page}"
+            new_url = url + f"?page={total_pages}"
 
         driver.get(new_url)
         wait_for_page_load(driver)
         product_info_processor(driver.page_source, output_info, exchange_rate)
+        if not is_next_button_active(driver.page_source):
+            return total_pages
+        total_pages += 1
 
 
 def web_scraper(
@@ -310,7 +326,9 @@ def web_scraper(
         return False
 
     print(
-        "-------------------------- [ Start scraping ] --------------------------"
+        "-------------------------- "
+        "[ Start scraping ] "
+        "--------------------------"
     )
 
     exchange_rate = 1
@@ -339,35 +357,15 @@ def web_scraper(
         image_background_color=product_image_bg_color,
     )
     output_info.display_info()
-
     result = True
 
     try:
-        driver.get(url)
-        wait_for_page_load(driver)
-        page_source = driver.page_source
+        total_pages = start_scraping(driver, url, output_info, exchange_rate)
 
-        # Find the pagination section on the webpage
-        soup = BeautifulSoup(page_source, "html.parser")
-        custom_pagination = soup.select_one("ul.custom-pagination")
-        if custom_pagination:
-            pagination_element = custom_pagination.select_one(
-                "li.current-of-page"
-            )
-
-            # pagination_element: "current_page / total_pages"
-            # print(f"pagination_element: {pagination_element.text.strip()}")
-            total_pages = int(
-                pagination_element.text.strip().split("/")[1].strip()
-            )
-        else:
-            total_pages = 1
-
-        start_scraping(driver, url, output_info, exchange_rate, total_pages)
-
-        print()
-        print(f"Total pages: {total_pages}")
-        print(f"Total valid products: {output_info.product_count}")
+        print(
+            f"\nTotal pages: {total_pages}\n"
+            f"Total valid products: {output_info.product_count}"
+        )
 
     except TimeoutException:
         print("Element waiting timeout error")

@@ -208,7 +208,9 @@ def web_scraper(
         return False
 
     print(
-        "-------------------------- [ Start scraping ] --------------------------"
+        "-------------------------- "
+        "[ Start scraping ] "
+        "--------------------------"
     )
 
     try:
@@ -292,9 +294,10 @@ def web_scraper(
 
         start_scraping(driver, url, output_info, exchange_rate, total_pages)
 
-        print()
-        print(f"Total pages: {total_pages}")
-        print(f"Total valid products: {output_info.product_count}")
+        print(
+            f"\nTotal pages: {total_pages}\n"
+            f"Total valid products: {output_info.product_count}"
+        )
 
     except TimeoutException:
         print("Element waiting timeout error")

@@ -17,6 +17,10 @@ from scraper.store import chemist_warehouse
 from scraper.store.store_info import StoreWebScraper
 
 
+def handle_key_interrupt():
+    print("Received KeyboardInterrupt, stop processing")
+
+
 def scrape_upthere_store(
     enable_multiprocessing: bool,
     chrome_driver: ChromeDriver,
@@ -63,16 +67,18 @@ def scrape_upthere_store(
 
     try:
         if enable_multiprocessing:
-            with Pool() as pool:
-                for result in pool.imap(
-                    upthere_scraper.execute_scraper, brands_url
-                ):
-                    pass
+            with Pool(processes=2) as pool:
+                pool.imap(upthere_scraper.execute_scraper, brands_url)
+                pool.close()
+                pool.join()
         else:
             for url in brands_url:
                 upthere_scraper.execute_scraper(url)
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, stop processing")
+        handle_key_interrupt()
+        if enable_multiprocessing:
+            pool.terminate()
+            pool.join()
         raise
 
 
@@ -98,16 +104,18 @@ def scrape_supply_store(
 
     try:
         if enable_multiprocessing:
-            with Pool() as pool:
-                for result in pool.imap(
-                    supply_scraper.execute_scraper, brands_url
-                ):
-                    pass
+            with Pool(processes=2) as pool:
+                pool.imap(supply_scraper.execute_scraper, brands_url)
+                pool.close()
+                pool.join()
         else:
             for url in brands_url:
                 supply_scraper.execute_scraper(url)
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, stop processing")
+        handle_key_interrupt()
+        if enable_multiprocessing:
+            pool.terminate()
+            pool.join()
         raise
 
 
@@ -166,21 +174,22 @@ def scrape_cettire_store(
 
     try:
         if enable_multiprocessing:
-            with Pool() as pool:
-                for result in pool.imap(
-                    cettire_scraper.execute_scraper, brands_url
-                ):
-                    pass
+            with Pool(processes=2) as pool:
+                pool.imap(cettire_scraper.execute_scraper, brands_url)
+                pool.close()
+                pool.join()
         else:
             for url in brands_url:
                 cettire_scraper.execute_scraper(url)
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, stop processing")
+        handle_key_interrupt()
+        if enable_multiprocessing:
+            pool.terminate()
+            pool.join()
         raise
 
 
 def scrape_chemist_warehouse(
-    enable_multiprocessing: bool,
     chrome_driver: ChromeDriver,
     root_dir: str,
     font_path: str,
@@ -201,7 +210,7 @@ def scrape_chemist_warehouse(
         for url in brands_url:
             chemist_warehouse_scraper.execute_scraper(url)
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, stop processing")
+        handle_key_interrupt()
         raise
 
 
@@ -242,9 +251,7 @@ def main(root_dir=None) -> None:
         scrape_cettire_store(
             enable_multiprocessing, chrome_driver, root_dir, font_path
         )
-        scrape_chemist_warehouse(
-            enable_multiprocessing, chrome_driver, root_dir, font_path
-        )
+        scrape_chemist_warehouse(chrome_driver, root_dir, font_path)
 
 
 if __name__ == "__main__":

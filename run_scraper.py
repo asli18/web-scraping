@@ -4,6 +4,7 @@ import os
 import platform
 import sys
 import time
+from enum import Enum
 from multiprocessing import Pool
 
 import psutil
@@ -11,10 +12,17 @@ import psutil
 from scraper import common
 from scraper.chrome_driver import ChromeDriver
 from scraper.store import cettire_store
+from scraper.store import chemist_warehouse
 from scraper.store import supply_store
 from scraper.store import upthere_store
-from scraper.store import chemist_warehouse
 from scraper.store.store_info import StoreWebScraper
+
+
+class StoreCatalog(Enum):
+    UPTHERE = "upthere"
+    SUPPLY = "supply"
+    CETTIRE = "cettire"
+    CHEMIST_WAREHOUSE = "chemist"
 
 
 def handle_key_interrupt():
@@ -190,6 +198,7 @@ def scrape_cettire_store(
 
 
 def scrape_chemist_warehouse(
+    enable_multiprocessing: bool,
     chrome_driver: ChromeDriver,
     root_dir: str,
     font_path: str,
@@ -207,14 +216,23 @@ def scrape_chemist_warehouse(
     ]
 
     try:
-        for url in brands_url:
-            chemist_warehouse_scraper.execute_scraper(url)
+        if enable_multiprocessing:
+            with Pool(processes=2) as pool:
+                pool.imap(chemist_warehouse_scraper.execute_scraper, brands_url)
+                pool.close()
+                pool.join()
+        else:
+            for url in brands_url:
+                chemist_warehouse_scraper.execute_scraper(url)
     except KeyboardInterrupt:
         handle_key_interrupt()
+        if enable_multiprocessing:
+            pool.terminate()
+            pool.join()
         raise
 
 
-def main(root_dir=None) -> None:
+def main(sites: list[str], root_dir: str = None) -> None:
     if root_dir is None:
         if getattr(sys, "frozen", False):
             root_dir = os.path.dirname(sys.executable)  # pyinstaller executable
@@ -239,19 +257,22 @@ def main(root_dir=None) -> None:
     atexit.register(ChromeDriver.terminate_chromedriver_orphans)
     enable_multiprocessing = True
 
+    function_map = {
+        StoreCatalog.UPTHERE.value: scrape_upthere_store,
+        StoreCatalog.SUPPLY.value: scrape_supply_store,
+        StoreCatalog.CETTIRE.value: scrape_cettire_store,
+        StoreCatalog.CHEMIST_WAREHOUSE.value: scrape_chemist_warehouse,
+    }
+
     with ChromeDriver(
         cache_dir=os.path.join(root_dir, "chrome_cache")
     ) as chrome_driver:
-        scrape_upthere_store(
-            enable_multiprocessing, chrome_driver, root_dir, font_path
-        )
-        scrape_supply_store(
-            enable_multiprocessing, chrome_driver, root_dir, font_path
-        )
-        scrape_cettire_store(
-            enable_multiprocessing, chrome_driver, root_dir, font_path
-        )
-        scrape_chemist_warehouse(chrome_driver, root_dir, font_path)
+        for site in sites:
+            if site in function_map:
+                scrape_function = function_map[site]
+                scrape_function(
+                    enable_multiprocessing, chrome_driver, root_dir, font_path
+                )
 
 
 if __name__ == "__main__":
@@ -263,13 +284,35 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Web scraping tool for online stores"
     )
+    # Add parameter for the scraping root directory
     parser.add_argument(
         "root_dir", nargs="?", default=None, help="Root directory path"
     )
+
+    # Add option for selecting websites
+    parser.add_argument(
+        "-s",
+        "--sites",
+        type=str,
+        nargs="+",
+        help="Select which sites to scrape. "
+        "Separate multiple sites with spaces, e.g., -s site1 site2",
+        # Add your site options here
+        choices=[store.value for store in StoreCatalog],
+        default=[store.value for store in StoreCatalog],
+    )  # Default to all sites
+
     args = parser.parse_args()
 
+    if args.root_dir:
+        print(f"Root directory: {args.root_dir}")
+    else:
+        print("Root directory: using current directory")
+
+    print(f"Selected sites for scraping: {args.sites}")
+
     try:
-        main(args.root_dir)
+        main(args.sites, args.root_dir)
     except KeyboardInterrupt:
         print("Exiting main process due to KeyboardInterrupt")
     except Exception as e:
@@ -281,11 +324,11 @@ if __name__ == "__main__":
     os_name = platform.system()
     if os_name == "Windows":
         memory_peak = process.memory_info().peak_wset / 1024 / 1024  # MB
-        print(f"Memory peak: {memory_peak} MB")
+        print(f"Memory peak: {memory_peak:.1f} MB")
 
     after_memory = process.memory_info().rss
     memory_used = (after_memory - before_memory) / 1024 / 1024  # MB
-    print(f"Memory usage: {memory_used} MB")
+    print(f"Memory usage: {memory_used:.1f} MB")
 
     _, hours, minutes, seconds = common.convert_seconds_to_time(execution_time)
     print(
